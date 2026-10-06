@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { StarIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/Button"
@@ -19,7 +19,6 @@ export function FavoriteButton({
   const isFavorite = useIsFavorite(code)
   const toggle = useUserData((s) => s.toggleFavorite)
   const router = useRouter()
-  const searchParams = useSearchParams()
   const label = isFavorite ? `Remove ${name} from favorites` : `Add ${name} to favorites`
 
   return (
@@ -32,8 +31,9 @@ export function FavoriteButton({
       title={label}
       onClick={async () => {
         await toggle(code)
-        // The Favorites tab is filtered on the server; refresh so the row drops out.
-        if (searchParams.get("tab") === "favorites") router.refresh()
+        // The Favorites tab is filtered on the server; refresh so the row drops out
+        // here and any cached copy of that tab is dropped from the router cache.
+        router.refresh()
       }}
     >
       <StarIcon

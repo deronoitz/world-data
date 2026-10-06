@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { ArrowDownIcon, ArrowUpIcon, PinIcon, PinOffIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/Button"
@@ -11,6 +12,7 @@ import { moveItem } from "./helpers/move-item"
 import { LibraryEmptyState } from "./LibraryEmptyState"
 
 export function IndicatorsTab() {
+  const router = useRouter()
   const savedIndicators = useUserData((s) => s.savedIndicators)
   const reorder = useUserData((s) => s.reorderIndicators)
   const togglePin = useUserData((s) => s.togglePinnedIndicator)
@@ -23,7 +25,10 @@ export function IndicatorsTab() {
     )
   }
 
-  const move = (index: number, delta: number) => void reorder(moveItem(savedIndicators, index, delta))
+  // Pinned indicators render as server KPI cards on country pages; refresh drops
+  // any cached copies of those pages from the router cache.
+  const move = (index: number, delta: number) =>
+    void reorder(moveItem(savedIndicators, index, delta)).then(() => router.refresh())
 
   return (
     <div className="flex max-w-xl flex-col gap-2">
@@ -45,7 +50,7 @@ export function IndicatorsTab() {
               >
                 <ArrowDownIcon />
               </Button>
-              <Button variant="ghost" size="icon-sm" aria-label="Unpin" onClick={() => void togglePin(code)}>
+              <Button variant="ghost" size="icon-sm" aria-label="Unpin" onClick={() => void togglePin(code).then(() => router.refresh())}>
                 <PinOffIcon />
               </Button>
             </CardAction>

@@ -8,7 +8,7 @@ import { useUserData } from "@/stores/user-data-store"
 import { FavoriteButton } from "../FavoriteButton"
 
 describe("FavoriteButton", () => {
-  it("favorites a country", async () => {
+  it("favorites a country and refreshes cached server-filtered pages", async () => {
     mockFetch("POST", "/api/favorites", reply(201, { country_code: "IDN" }))
     const { user } = renderWithProviders(<FavoriteButton code="IDN" name="Indonesia" />, { signedIn: true })
 
@@ -19,7 +19,7 @@ describe("FavoriteButton", () => {
       "true"
     )
     expect(fetchRequests("POST", "/api/favorites")).toHaveLength(1)
-    expect(router.refresh).not.toHaveBeenCalled()
+    expect(router.refresh).toHaveBeenCalledOnce()
   })
 
   it("unfavorites and refreshes the server-filtered Favorites tab", async () => {
