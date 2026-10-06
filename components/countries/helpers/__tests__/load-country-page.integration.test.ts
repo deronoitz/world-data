@@ -2,12 +2,11 @@
 
 import { WB, wbCountry, wbPage } from "@/test-kit/app-fixtures"
 import { fetchRequests, mockFetch } from "@/test-kit/mock-fetch"
-import { setupSupabase } from "@/test-kit/supabase"
+import { favoriteCountries } from "@/lib/db/schema"
+import { TEST_USER, setupAuth } from "@/test-kit/auth"
+import { db } from "@/test-kit/db"
 
 import { loadCountryPage } from "../load-country-page"
-
-vi.mock("@/lib/supabase/server", () => import("@/test-kit/supabase"))
-vi.mock("@/lib/supabase/env", () => import("@/test-kit/supabase"))
 
 const IDN = wbCountry("IDN", "Indonesia", { capital: "Jakarta" })
 const BRA = wbCountry("BRA", "Brazil", { region: ["LCN", "Latin America & Caribbean"], capital: "Brasilia" })
@@ -23,7 +22,7 @@ const MANY = Array.from({ length: 25 }, (_, i) =>
 )
 
 const favorites = (codes: string[]) =>
-  setupSupabase({ tables: { favorite_countries: { data: codes.map((country_code) => ({ country_code })), error: null } } })
+  db.insert(favoriteCountries).values(codes.map((country_code) => ({ user_id: TEST_USER.id, country_code })))
 
 const names = (page: Awaited<ReturnType<typeof loadCountryPage>>) => page.countries.map((c) => c.name)
 
@@ -51,17 +50,17 @@ describe("loadCountryPage without a search", () => {
     expect(Object.fromEntries(listed)).toMatchObject({ region: "LCN", page: "1" })
   })
 
-  it("lists only favorites on the favorites tab", async () => {
-    favorites(["IDN", "BRA"])
-    mockFetch("GET", `${WB}/country/IDN;BRA`, wbPage([IDN, BRA]))
+  it("lists favorites from the cached country list, not a per-user API request", async () => {
+    await favorites(["IDN", "BRA"])
+    mockFetch("GET", `${WB}/country`, wbPage(ALL))
 
-    const result = await loadCountryPage({ tab: "favorites", region: "EAS" })
-
-    expect(names(result)).toEqual(["Brazil", "Indonesia"])
+    expect(names(await loadCountryPage({ tab: "favorites" }))).toEqual(["Brazil", "Indonesia"])
+    expect(names(await loadCountryPage({ tab: "favorites", region: "EAS" }))).toEqual(["Indonesia"])
+    expect(fetchRequests().map((r) => new URL(r.url).pathname)).not.toContain("/v2/country/IDN;BRA")
   })
 
   it("returns an empty page without calling the API when there are no favorites", async () => {
-    setupSupabase({ user: null })
+    setupAuth({ user: null })
     expect(await loadCountryPage({ tab: "favorites" })).toEqual({ countries: [], total: 0, pages: 1, page: 1 })
     expect(fetchRequests()).toHaveLength(0)
   })
@@ -88,7 +87,7 @@ describe("loadCountryPage with a search", () => {
   })
 
   it("searches within favorites on the favorites tab", async () => {
-    favorites(["ARG"])
+    await favorites(["ARG"])
     expect(names(await loadCountryPage({ q: "ar", tab: "favorites" }))).toEqual(["Argentina"])
   })
 })

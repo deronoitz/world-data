@@ -10,7 +10,7 @@ import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/comp
 import { Input } from "@/components/ui/Input"
 import { flagEmoji, formatDate } from "@/lib/format"
 import { getIndicator } from "@/lib/indicators"
-import type { ComparisonRow } from "@/lib/supabase/types"
+import type { ComparisonRow } from "@/lib/db/types"
 import { useUserData } from "@/stores/user-data-store"
 
 import { comparisonHref } from "./helpers/comparison-href"

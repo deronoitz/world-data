@@ -1,56 +1,63 @@
 // @vitest-environment node
 
-import { setupSupabase } from "@/test-kit/supabase"
+import { favoriteCountries, savedIndicators } from "@/lib/db/schema"
+import { OTHER_USER, TEST_USER, setAuthConfigured, setupAuth } from "@/test-kit/auth"
+import { db } from "@/test-kit/db"
 
 import { getFavoriteCodes, getSavedIndicatorCodes } from "../library"
 
-vi.mock("@/lib/supabase/server", () => import("@/test-kit/supabase"))
-vi.mock("@/lib/supabase/env", () => import("@/test-kit/supabase"))
+const failNextSelect = () => {
+  vi.spyOn(console, "error").mockImplementation(() => {})
+  vi.spyOn(db, "select").mockImplementationOnce(() => {
+    throw new Error("boom")
+  })
+}
 
 describe("getFavoriteCodes", () => {
   it("is empty when signed out, without querying", async () => {
-    const supabase = setupSupabase({ user: null })
+    setupAuth({ user: null })
+    const select = vi.spyOn(db, "select")
     expect(await getFavoriteCodes()).toEqual(new Set())
-    expect(supabase.queries).toHaveLength(0)
+    expect(select).not.toHaveBeenCalled()
   })
 
-  it("returns the user's favorite country codes", async () => {
-    setupSupabase({
-      tables: { favorite_countries: { data: [{ country_code: "IDN" }, { country_code: "BRA" }], error: null } },
-    })
+  it("is empty when auth is not configured", async () => {
+    setAuthConfigured(false)
+    expect(await getFavoriteCodes()).toEqual(new Set())
+  })
+
+  it("returns only the user's favorite country codes", async () => {
+    await db.insert(favoriteCountries).values([
+      { user_id: TEST_USER.id, country_code: "IDN" },
+      { user_id: TEST_USER.id, country_code: "BRA" },
+      { user_id: OTHER_USER.id, country_code: "FRA" },
+    ])
     expect(await getFavoriteCodes()).toEqual(new Set(["IDN", "BRA"]))
   })
 
   it("treats a failed query as no favorites", async () => {
-    setupSupabase({ tables: { favorite_countries: { data: null, error: { message: "boom" } } } })
+    failNextSelect()
     expect(await getFavoriteCodes()).toEqual(new Set())
   })
 })
 
 describe("getSavedIndicatorCodes", () => {
   it("is empty when signed out", async () => {
-    setupSupabase({ user: null })
+    setupAuth({ user: null })
     expect(await getSavedIndicatorCodes()).toEqual([])
   })
 
-  it("returns pinned codes ordered by position", async () => {
-    const supabase = setupSupabase({
-      tables: {
-        saved_indicators: {
-          data: [{ indicator_code: "IT.NET.USER.ZS" }, { indicator_code: "SP.POP.TOTL" }],
-          error: null,
-        },
-      },
-    })
-    expect(await getSavedIndicatorCodes()).toEqual(["IT.NET.USER.ZS", "SP.POP.TOTL"])
-    expect(supabase.queries[0].ops).toEqual([
-      ["select", "indicator_code"],
-      ["order", "position", { ascending: true }],
+  it("returns the user's pinned codes ordered by position", async () => {
+    await db.insert(savedIndicators).values([
+      { user_id: TEST_USER.id, indicator_code: "SP.POP.TOTL", position: 1 },
+      { user_id: TEST_USER.id, indicator_code: "IT.NET.USER.ZS", position: 0 },
+      { user_id: OTHER_USER.id, indicator_code: "NY.GDP.MKTP.CD", position: 0 },
     ])
+    expect(await getSavedIndicatorCodes()).toEqual(["IT.NET.USER.ZS", "SP.POP.TOTL"])
   })
 
   it("treats a failed query as nothing pinned", async () => {
-    setupSupabase({ tables: { saved_indicators: { data: null, error: { message: "boom" } } } })
+    failNextSelect()
     expect(await getSavedIndicatorCodes()).toEqual([])
   })
 })

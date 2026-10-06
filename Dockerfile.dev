@@ -1,0 +1,11 @@
+# Local development only. Production runs on Vercel (see README).
+# Node 22.18+ runs the .mts scripts (geo build, migrations) without a build step.
+FROM node:24-alpine
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+EXPOSE 3000
+# compose.yaml bind-mounts the source. Migrations are idempotent, so apply them on every start.
+CMD ["sh", "-c", "pnpm db:migrate && pnpm geo && pnpm exec next dev -H 0.0.0.0"]

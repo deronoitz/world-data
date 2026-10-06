@@ -13,17 +13,19 @@ export type PanelParams = {
 }
 
 /**
- * Country list for the floating panel, 20 per page. Region and favorites are
- * filters the World Bank API supports, so those pages come straight from the
- * API; name search isn't, so a query falls back to filtering the cached list.
+ * Country list for the floating panel, 20 per page. A plain region filter pages
+ * straight from the World Bank API. Name search and the favorites tab filter
+ * the cached full list instead: the API doesn't support search, and asking it
+ * for a user's own set of countries is a new, uncached URL each time favorites
+ * change, which the World Bank can take 30+ seconds to answer.
  */
 export async function loadCountryPage(params: PanelParams): Promise<CountryPage> {
   const page = Math.max(1, Number(params.page) || 1)
-  const favoritesTab = params.tab === "favorites"
-  const favorites = favoritesTab ? await getFavoriteCodes() : undefined
+  const favorites = params.tab === "favorites" ? await getFavoriteCodes() : undefined
 
-  if (!params.q?.trim()) {
-    return listCountryPage({ page, region: params.region, codes: favorites && [...favorites] })
+  if (favorites?.size === 0) return { countries: [], total: 0, pages: 1, page: 1 }
+  if (!favorites && !params.q?.trim()) {
+    return listCountryPage({ page, region: params.region })
   }
 
   const filtered = filterCountries(await getCountries(), {

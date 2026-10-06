@@ -12,9 +12,6 @@ import CountriesError from "../error"
 import Loading from "../loading"
 import CountriesPage from "../page"
 
-vi.mock("@/lib/supabase/server", () => import("@/test-kit/supabase"))
-vi.mock("@/lib/supabase/env", () => import("@/test-kit/supabase"))
-
 const TOPOLOGY = JSON.parse(readFileSync(path.join(process.cwd(), "public", WORLD_GEO_URL), "utf8"))
 const IDN = wbCountry("IDN", "Indonesia", { capital: "Jakarta", lat: "-6.19", lng: "106.83" })
 const BRA = wbCountry("BRA", "Brazil", { region: ["LCN", "Latin America & Caribbean"], lat: "-15.8", lng: "-47.9" })

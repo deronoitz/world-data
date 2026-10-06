@@ -1,0 +1,58 @@
+# Local development only: Postgres + `next dev` with hot reload.
+# Production runs on Vercel with Neon Postgres (see README).
+#
+#   docker compose up --build    # then open http://localhost:3000
+#   docker compose up db         # just the database, for `pnpm dev` on the host
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: world_data
+    # Published on localhost only: the credentials are postgres/postgres.
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d world_data"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    # Optional: without .env.local the app still runs, with dev login only.
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      # Overrides .env.local: the app container always uses the local database,
+      # including migrations (which prefer the unpooled URL when it's set).
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/world_data
+      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@db:5432/world_data
+      # next dev binds 0.0.0.0; without this the Google callback URL would use it.
+      AUTH_URL: http://localhost:3000
+      # One-click "Dev login" as a demo user, so Google OAuth is optional locally.
+      # Only honored under `next dev`; production builds never enable it.
+      AUTH_DEV_LOGIN: "true"
+      # Local-only secret so the stack runs without .env.local. Always used by the
+      # container (it overrides any AUTH_SECRET in .env.local).
+      AUTH_SECRET: local-dev-secret-not-for-production
+    # Localhost only: Dev login needs no credentials, so keep it off the network.
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - .:/app
+      # Keep the container's own (Linux) node_modules and build output.
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

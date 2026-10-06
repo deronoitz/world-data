@@ -8,23 +8,6 @@ import { useUserData, type SessionUser } from "@/stores/user-data-store"
 
 import { SessionSync } from "../SessionSync"
 
-type AuthCallback = (event: string, session: { user: unknown } | null) => void
-
-const auth = vi.hoisted(() => ({ callback: undefined as AuthCallback | undefined }))
-
-vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: true }))
-
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({
-    auth: {
-      onAuthStateChange: (cb: AuthCallback) => {
-        auth.callback = cb
-        return { data: { subscription: { unsubscribe: vi.fn() } } }
-      },
-    },
-  }),
-}))
-
 function mockLibrary() {
   mockFetch("GET", "/api/favorites", [{ country_code: "IDN" }])
   mockFetch("GET", "/api/indicators", [])
@@ -41,10 +24,6 @@ async function renderSync(user: SessionUser | null) {
     )
   })
 }
-
-beforeEach(() => {
-  auth.callback = undefined
-})
 
 describe("SessionSync", () => {
   it("seeds the store with the server user and hydrates their library", async () => {
@@ -65,18 +44,5 @@ describe("SessionSync", () => {
     window.localStorage.setItem("world-data:compare", JSON.stringify({ state: { countries: ["IDN", "USA"] }, version: 0 }))
     await renderSync(null)
     await waitFor(() => expect(useCompare.getState().countries).toEqual(["IDN", "USA"]))
-  })
-
-  it("follows Supabase auth events", async () => {
-    await renderSync(null)
-    await waitFor(() => expect(auth.callback).toBeDefined())
-
-    mockLibrary()
-    act(() => auth.callback!("SIGNED_IN", { user: { id: "u2", email: "grace@example.com", user_metadata: { name: "Grace" } } }))
-    await waitFor(() => expect(useUserData.getState().status).toBe("ready"))
-    expect(useUserData.getState().user).toEqual({ id: "u2", email: "grace@example.com", name: "Grace", avatarUrl: null })
-
-    act(() => auth.callback!("SIGNED_OUT", null))
-    expect(useUserData.getState()).toMatchObject({ user: null, status: "signed-out", favorites: [] })
   })
 })

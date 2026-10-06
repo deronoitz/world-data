@@ -1,4 +1,4 @@
-import type { ComparisonRow } from "@/lib/supabase/types"
+import type { ComparisonRow } from "@/lib/db/types"
 
 /** Link that reopens a saved comparison on /compare. */
 export function comparisonHref(c: ComparisonRow) {

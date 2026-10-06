@@ -1,4 +1,4 @@
-import type { NoteRow } from "@/lib/supabase/types"
+import type { NoteRow } from "@/lib/db/types"
 
 import type { CountryLookup } from "./types"
 

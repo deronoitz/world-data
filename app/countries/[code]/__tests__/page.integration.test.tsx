@@ -4,12 +4,11 @@ import { notFound } from "next/navigation"
 import { wbCountry, wbPage } from "@/test-kit/app-fixtures"
 import { fetchRequests, mockFetch, reply } from "@/test-kit/mock-fetch"
 import { renderServer } from "@/test-kit/server"
-import { setupSupabase } from "@/test-kit/supabase"
+import { savedIndicators } from "@/lib/db/schema"
+import { TEST_USER, setupAuth } from "@/test-kit/auth"
+import { db } from "@/test-kit/db"
 
 import CountryPage, { generateMetadata } from "../page"
-
-vi.mock("@/lib/supabase/server", () => import("@/test-kit/supabase"))
-vi.mock("@/lib/supabase/env", () => import("@/test-kit/supabase"))
 
 const WB = "https://api.worldbank.org/v2"
 const ref = (id: string, value = id) => ({ id, iso2code: "", value })
@@ -50,7 +49,7 @@ beforeEach(() => {
 
 describe("country page", () => {
   it("renders the header and KPI cards", async () => {
-    setupSupabase({ user: null })
+    setupAuth({ user: null })
     // Unmocked KPI indicators fall back to "No data" via KpiCard's catch.
     mockFetch("GET", `${WB}/country/IDN/indicator/NY.GDP.MKTP.CD`, [{ pages: 1 }, []])
     mockFetch("GET", `${WB}/country/IDN/indicator/NY.GDP.PCAP.CD`, [{ pages: 1 }, []])
@@ -80,14 +79,13 @@ describe("country page", () => {
   })
 
   it("adds pinned indicators as extra KPI cards when signed in", async () => {
-    setupSupabase({
-      tables: {
-        saved_indicators: {
-          data: [{ indicator_code: "SP.POP.TOTL" }, { indicator_code: "IT.NET.USER.ZS" }, { indicator_code: "GONE" }],
-          error: null,
-        },
-      },
-    })
+    await db.insert(savedIndicators).values(
+      ["SP.POP.TOTL", "IT.NET.USER.ZS", "GONE"].map((indicator_code, position) => ({
+        user_id: TEST_USER.id,
+        indicator_code,
+        position,
+      }))
+    )
     for (const code of ["NY.GDP.MKTP.CD", "NY.GDP.PCAP.CD", "SP.DYN.LE00.IN", "IT.NET.USER.ZS"]) {
       // Latest-value lookups fail; the history series is empty.
       mockFetch("GET", `${WB}/country/IDN/indicator/${code}`, (req: Request) =>
@@ -102,11 +100,11 @@ describe("country page", () => {
     expect(pinned).toHaveAttribute("href", "/countries/IDN?indicator=IT.NET.USER.ZS")
     expect(pinned.querySelector('[data-slot="card"]')).toHaveClass("ring-2")
     expect(screen.getAllByLabelText("Pinned")).toHaveLength(1)
-    expect(screen.getAllByText("No data available")).toHaveLength(4)
+    expect(screen.getAllByText("Couldn't load, try again later")).toHaveLength(4)
   })
 
-  it("keeps the year range in KPI links and the history request", async () => {
-    setupSupabase({ user: null })
+  it("keeps the year range in KPI links and requests the full history", async () => {
+    setupAuth({ user: null })
     for (const code of ["NY.GDP.MKTP.CD", "NY.GDP.PCAP.CD", "SP.DYN.LE00.IN"]) {
       mockFetch("GET", `${WB}/country/IDN/indicator/${code}`, [{ pages: 1 }, []])
     }
@@ -120,11 +118,27 @@ describe("country page", () => {
     const history = fetchRequests("GET", `${WB}/country/IDN/indicator/NY.GDP.PCAP.CD`).find((r) =>
       new URL(r.url).searchParams.has("date")
     )
-    expect(new URL(history!.url).searchParams.get("date")).toBe("2005:2015")
+    expect(new URL(history!.url).searchParams.get("date")).toBe(`1960:${new Date().getFullYear()}`)
+  })
+
+  it("shows a retryable error in place of the chart when the history fails", async () => {
+    setupAuth({ user: null })
+    for (const code of ["SP.POP.TOTL", "NY.GDP.MKTP.CD", "NY.GDP.PCAP.CD", "SP.DYN.LE00.IN"]) {
+      mockFetch("GET", `${WB}/country/IDN/indicator/${code}`, (req: Request) =>
+        new URL(req.url).searchParams.has("date") ? reply(504) : [{ pages: 1 }, []]
+      )
+    }
+
+    await renderServer(CountryPage(props("IDN")))
+
+    expect(screen.getByText("Couldn't load this chart")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument()
+    // The rest of the page still renders.
+    expect(screen.getByRole("heading", { level: 1, name: "Indonesia" })).toBeInTheDocument()
   })
 
   it("handles a small economy without a capital or coordinates", async () => {
-    setupSupabase({ user: null })
+    setupAuth({ user: null })
     mockFetch("GET", `${WB}/country`, wbPage([wbCountry("SGP", "Singapore")]))
     for (const code of ["SP.POP.TOTL", "NY.GDP.MKTP.CD", "NY.GDP.PCAP.CD", "SP.DYN.LE00.IN"]) {
       mockFetch("GET", `${WB}/country/SGP/indicator/${code}`, [{ pages: 1 }, []])

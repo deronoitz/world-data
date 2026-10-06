@@ -11,10 +11,10 @@ import {
 } from "@/components/ui/Dialog"
 import { useUserData } from "@/stores/user-data-store"
 
-import { GoogleButton } from "./GoogleButton"
+import { SignInOptions, type SignInProviders } from "./SignInOptions"
 
 /** Opened by any gated action (favorite, pin, save, notes) while signed out. */
-export function SignInDialog() {
+export function SignInDialog({ providers }: { providers: SignInProviders }) {
   const reason = useUserData((s) => s.signInPrompt)
   const close = useUserData((s) => s.closeSignInPrompt)
 
@@ -29,7 +29,7 @@ export function SignInDialog() {
           </DialogDescription>
         </DialogHeader>
         <Suspense>
-          <GoogleButton className="w-full" />
+          <SignInOptions providers={providers} />
         </Suspense>
       </DialogContent>
     </Dialog>

@@ -4,37 +4,39 @@ Helpers for the `integration` Vitest project (`*.integration.test.ts(x)`). Integ
 
 | Boundary | Fake | File |
 |---|---|---|
-| Supabase (`@/lib/supabase/server`, `@/lib/supabase/env`) | chainable query builder that records each query | `supabase.ts` |
+| Auth.js (`@/auth`, `@/lib/auth/env`) | settable session user and `signIn`/`signOut` spies | `auth.ts` |
+| Postgres (`@/lib/db`) | real Postgres in-process (PGlite) with the migrations applied | `db.ts` |
 | `fetch` (the app's `/api/*` and the World Bank API) | handlers matched by method and URL | `mock-fetch.ts` |
 | `next/navigation` | `router` spies, plus a settable pathname and search params | `navigation.ts` |
 | `sonner` | `toast` spies | `setup.ts` |
 
-`setup.ts` applies the `next/navigation` and `sonner` mocks to every integration test. After each test it unmounts the rendered tree, then resets fetch, navigation, Supabase and the zustand stores. A test also **fails** if it made a `fetch` call that no handler matched.
+`setup.ts` applies the `next/navigation`, `sonner`, Auth.js and database mocks to every integration test. Before each test it empties the database. After each test it unmounts the rendered tree, then resets fetch, navigation, auth and the zustand stores. A test also **fails** if it made a `fetch` call that no handler matched.
 
-## Route handlers
+## Route handlers and the database
 
-Route handler tests run under Node, so put `// @vitest-environment node` at the top of the file. Point the Supabase modules at the fake, then configure it in each test:
+Route handler tests run under Node, so put `// @vitest-environment node` at the top of the file. Auth.js and the database are already wired up by `setup.ts`, so a test only arranges data and calls the handler:
 
 ```ts
 // @vitest-environment node
+import { favoriteCountries } from "@/lib/db/schema"
+import { OTHER_USER, TEST_USER, setupAuth } from "@/test-kit/auth"
+import { db } from "@/test-kit/db"
 import { callRoute } from "@/test-kit/route"
-import { setSupabaseConfigured, setupSupabase } from "@/test-kit/supabase"
-import { GET, POST } from "../route"
+import { DELETE } from "../[code]/route"
 
-vi.mock("@/lib/supabase/server", () => import("@/test-kit/supabase"))
-vi.mock("@/lib/supabase/env", () => import("@/test-kit/supabase"))
-
-it("creates a favorite", async () => {
-  const supabase = setupSupabase({ tables: { favorite_countries: { data: null, error: null } } })
-  const res = await callRoute(POST, { method: "POST", body: { country_code: "IDN" } })
-  expect(res.status).toBe(201)
-  expect(supabase.queries[0].ops[0][0]).toBe("upsert")
+it("deletes only the user's own favorite", async () => {
+  await db.insert(favoriteCountries).values([
+    { user_id: TEST_USER.id, country_code: "IDN" },
+    { user_id: OTHER_USER.id, country_code: "IDN" },
+  ])
+  const res = await callRoute(DELETE, { method: "DELETE", params: { code: "IDN" } })
+  expect(res.status).toBe(204)
+  expect(await db.select().from(favoriteCountries)).toHaveLength(1)
 })
 ```
 
-- `setupSupabase({ user: null })` simulates a signed-out request (expect a 401).
-- `setSupabaseConfigured(false)` simulates missing env vars (expect a 503).
-- A table can be set to a `{ data, error }` result. To answer based on the query, pass a function `(query) => result` instead.
+- **Auth** (`auth.ts`): `TEST_USER` is signed in by default. `setupAuth({ user: null })` signs out (expect a 401), `setupAuth({ user: OTHER_USER })` switches user, and `setAuthConfigured(false)` simulates missing env vars (expect a 503). `setProviders({ google, devLogin })` picks the sign-in providers the env reports (default: Google only). `signIn` and `signOut` are spies.
+- **Database** (`db.ts`): `@/lib/db` points at an in-process [PGlite](https://pglite.dev) Postgres with `migrations/` applied, so queries, constraints and Postgres error codes are real. It only boots in files that import code using it. Before each test, every table is emptied and `users` holds `TEST_USER` and `OTHER_USER`. Seed rows with `db.insert(...)`. To simulate a database failure, `vi.spyOn(db, "select").mockImplementationOnce(() => { throw … })`.
 - `callRoute(handler, { method, path, body, params })` returns `{ status, headers, body }`. A string `body` is sent raw, which is how to test invalid JSON.
 
 ## Components and stores

@@ -35,12 +35,15 @@ describe("KpiCard", () => {
     expect(container.querySelector('[data-slot="card"]')).toHaveClass("ring-2")
   })
 
-  it.each([
-    ["no observation", () => wbPage([])],
-    ["an API failure", () => reply(502)],
-  ])("falls back to no data on %s", async (_, response) => {
-    mockFetch("GET", KPI_URL, response)
+  it("says no data when there is no observation", async () => {
+    mockFetch("GET", KPI_URL, wbPage([]))
     await renderCard()
     expect(screen.getByRole("link")).toHaveTextContent("No data available")
+  })
+
+  it("says it couldn't load when the API fails or times out", async () => {
+    mockFetch("GET", KPI_URL, reply(502))
+    await renderCard()
+    expect(screen.getByRole("link")).toHaveTextContent("Couldn't load, try again later")
   })
 })

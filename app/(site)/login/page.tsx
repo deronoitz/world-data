@@ -3,11 +3,12 @@ import { redirect } from "next/navigation"
 import { Suspense } from "react"
 import { GlobeIcon } from "lucide-react"
 
-import { GoogleButton } from "@/components/auth/GoogleButton"
+import { SignInOptions } from "@/components/auth/SignInOptions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
 import { firstParam } from "@/lib/countries"
 import { safeNext } from "@/lib/safe-next"
-import { getUser } from "@/lib/supabase/server"
+import { isDevLoginEnabled, isGoogleConfigured } from "@/lib/auth/env"
+import { getUser } from "@/lib/auth/session"
 
 export const metadata: Metadata = { title: "Sign in" }
 
@@ -26,7 +27,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       </CardHeader>
       <CardContent>
         <Suspense>
-          <GoogleButton next={next} className="w-full" />
+          <SignInOptions providers={{ google: isGoogleConfigured, devLogin: isDevLoginEnabled }} next={next} />
         </Suspense>
       </CardContent>
     </Card>

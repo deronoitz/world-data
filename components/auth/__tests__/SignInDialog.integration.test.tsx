@@ -5,14 +5,16 @@ import { useUserData } from "@/stores/user-data-store"
 
 import { SignInDialog } from "../SignInDialog"
 
+const GOOGLE_ONLY = { google: true, devLogin: false }
+
 describe("SignInDialog", () => {
   it("stays closed without a sign-in prompt", () => {
-    renderWithProviders(<SignInDialog />)
+    renderWithProviders(<SignInDialog providers={GOOGLE_ONLY} />)
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
   it("opens with the reason from a gated action and closes", async () => {
-    const { user } = renderWithProviders(<SignInDialog />)
+    const { user } = renderWithProviders(<SignInDialog providers={GOOGLE_ONLY} />)
 
     act(() => {
       useUserData.getState().requireUser("Sign in to write notes.")

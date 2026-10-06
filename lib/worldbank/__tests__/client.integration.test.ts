@@ -11,6 +11,7 @@ import {
   getLatestForAll,
   getLatestValue,
   listCountryPage,
+  recoverWith,
 } from "../client"
 import type { WbCountryRaw, WbIndicatorRaw, WbObservationRaw } from "../types"
 
@@ -68,6 +69,34 @@ describe("World Bank client", () => {
     await expect(getCountries()).rejects.toMatchObject({ code: "http", status: 502 })
   })
 
+  describe("timeout", () => {
+    afterEach(() => vi.useRealTimers())
+
+    it("stops waiting after 15s without aborting the request", async () => {
+      vi.useFakeTimers()
+      let respond!: (value: unknown) => void
+      mockFetch("GET", `${WB}/country`, () => new Promise((resolve) => (respond = resolve)))
+
+      const result = getCountries().catch((e) => e)
+      await vi.advanceTimersByTimeAsync(15_000)
+
+      expect(await result).toMatchObject({ code: "timeout", message: "World Bank API did not respond within 15s" })
+      // The request is still open, so its response can still be cached when it arrives.
+      expect(fetchRequests("GET")[0].signal.aborted).toBe(false)
+      respond([meta(), COUNTRIES])
+    })
+
+    it("ignores a request that fails after the timeout", async () => {
+      vi.useFakeTimers()
+      mockFetch("GET", `${WB}/country`, () => new Promise((resolve) => setTimeout(() => resolve(reply(500)), 20_000)))
+
+      const result = getCountries().catch((e) => e)
+      await vi.advanceTimersByTimeAsync(20_000)
+
+      expect(await result).toMatchObject({ code: "timeout" })
+    })
+  })
+
   it("rejects unexpected response shapes", async () => {
     mockFetch("GET", `${WB}/country`, { not: "an array" })
     await expect(getCountries()).rejects.toMatchObject({ code: "shape" })
@@ -119,18 +148,19 @@ describe("World Bank client", () => {
       expect(fetchRequests()).toHaveLength(0)
     })
 
-    it("drops rows without an ISO3 code and sorts by year", async () => {
+    it("drops rows without an ISO3 code, applies the year range and sorts by year", async () => {
       mockFetch("GET", `${WB}/country/IDN;USA/indicator/SP.POP.TOTL`, [
         meta(),
-        [obs("IDN", 3, "2022"), { ...obs("", 9, "2000") }, obs("USA", 1, "2020")],
+        [obs("IDN", 3, "2022"), { ...obs("", 9, "2000") }, obs("USA", 1, "2020"), obs("USA", 5, "1999")],
       ])
       const series = await getIndicatorSeries(["IDN", "USA"], "SP.POP.TOTL", 2000, 2022)
       expect(series.map((o) => [o.country, o.year])).toEqual([
         ["USA", 2020],
         ["IDN", 2022],
       ])
+      // Always the full history, so every year range shares one cached response.
       const params = new URL(fetchRequests("GET")[0].url).searchParams
-      expect(params.get("date")).toBe("2000:2022")
+      expect(params.get("date")).toBe(`1960:${new Date().getFullYear()}`)
     })
 
     it("defaults the range to 1960 through the current year", async () => {
@@ -182,11 +212,6 @@ describe("World Bank client", () => {
       expect(paged.get("page")).toBe("1")
     })
 
-    it("returns an empty page for an empty favorites list without fetching", async () => {
-      expect(await listCountryPage({ page: 1, codes: [] })).toEqual({ countries: [], total: 0, pages: 1, page: 1 })
-      expect(fetchRequests()).toHaveLength(0)
-    })
-
     it("filters by region and requests the given page", async () => {
       mockFetch("GET", `${WB}/country`, [meta(2, 21, 2), [country("IDN", "Indonesia")]])
       const result = await listCountryPage({ page: 2, region: "EAS" })
@@ -197,13 +222,30 @@ describe("World Bank client", () => {
     })
 
     it("falls back to the last page when the requested page is past the end", async () => {
-      mockFetch("GET", `${WB}/country/IDN;USA`, (req) => {
+      mockFetch("GET", `${WB}/country`, (req) => {
         const page = Number(new URL(req.url).searchParams.get("page"))
         return page > 1 ? [meta(1, 2, page), []] : [meta(1, 2, 1), [country("USA", "United States"), country("IDN", "Indonesia")]]
       })
-      const result = await listCountryPage({ page: 5, region: "EAS", codes: ["IDN", "USA"] })
+      const result = await listCountryPage({ page: 5, region: "EAS" })
       expect(result.page).toBe(1)
       expect(result.countries.map((c) => c.code)).toEqual(["IDN", "USA"])
     })
+  })
+})
+
+describe("recoverWith", () => {
+  it("returns the fallback quietly for a timeout", () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {})
+    expect(recoverWith(null)(new WorldBankError("timeout", "slow"))).toBeNull()
+    expect(errors).not.toHaveBeenCalled()
+    errors.mockRestore()
+  })
+
+  it("logs any other failure before falling back", () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {})
+    const failure = new WorldBankError("shape", "bad body")
+    expect(recoverWith(undefined)(failure)).toBeUndefined()
+    expect(errors).toHaveBeenCalledWith(failure)
+    errors.mockRestore()
   })
 })

@@ -5,7 +5,7 @@ import { cache } from "react"
 import { PAGE_SIZE } from "@/lib/countries"
 
 import { ENDPOINTS } from "./endpoints"
-import { WORLD_BANK_API_URL } from "./env"
+import { WORLD_BANK_API_URL, WORLD_BANK_TIMEOUT_MS } from "./env"
 import {
   isAggregate,
   normalizeCountry,
@@ -66,12 +66,14 @@ async function wbFetch<T>(
     url.searchParams.set(key, String(value))
   }
 
-  const res = await fetch(url, { next: { revalidate, tags: ["wb"] } })
-  if (!res.ok) {
-    throw new WorldBankError("http", `World Bank API responded ${res.status}`, res.status)
-  }
-
-  const json: unknown = await res.json()
+  const json = await withTimeout(
+    fetch(url, { next: { revalidate, tags: ["wb"] } }).then((res) => {
+      if (!res.ok) {
+        throw new WorldBankError("http", `World Bank API responded ${res.status}`, res.status)
+      }
+      return res.json() as Promise<unknown>
+    })
+  )
   // The API reports errors with HTTP 200 and a one-element [{ message }] body.
   if (isErrorBody(json)) {
     const msg = json[0].message[0]
@@ -89,6 +91,35 @@ async function wbFetch<T>(
   return { meta, rows: rows ?? [] }
 }
 
+/**
+ * `.catch` handler for a section that can render without World Bank data. A
+ * timeout is expected (uncached requests are slow); anything else is logged so
+ * real failures show up in the server logs.
+ */
+export function recoverWith<T>(fallback: T) {
+  return (error: unknown): T => {
+    if (!(error instanceof WorldBankError && error.code === "timeout")) console.error(error)
+    return fallback
+  }
+}
+
+/**
+ * Stops waiting after WORLD_BANK_TIMEOUT_MS. The request itself is not aborted:
+ * an aborted request never gets cached, while one left running lands in Next's
+ * fetch cache and makes the next attempt fast.
+ */
+function withTimeout<T>(request: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      const seconds = Math.round(WORLD_BANK_TIMEOUT_MS / 1000)
+      reject(new WorldBankError("timeout", `World Bank API did not respond within ${seconds}s`))
+    }, WORLD_BANK_TIMEOUT_MS)
+  })
+  request.catch(() => {}) // a late failure after the timeout is not unhandled
+  return Promise.race([request, timeout]).finally(() => clearTimeout(timer))
+}
+
 /** All real economies (aggregates such as "World" removed), sorted by name. */
 export const getCountries = cache(async (): Promise<Country[]> => {
   const { rows } = await wbFetch<WbCountryRaw>(ENDPOINTS.countries, { per_page: 400 })
@@ -102,27 +133,21 @@ export type CountryPage = { countries: Country[]; total: number; pages: number; 
 
 /**
  * One page of real economies, paged by the API itself. Aggregates are excluded
- * by always passing a region filter (all regions when none is chosen); `codes`
- * narrows to specific countries (favorites). Rows come back in ISO3 order, so
- * each page is re-sorted by name for display.
+ * by always passing a region filter (all regions when none is chosen). Rows come
+ * back in ISO3 order, so each page is re-sorted by name for display.
  */
 export async function listCountryPage({
   page,
   region,
-  codes,
 }: {
   page: number
   region?: string
-  codes?: string[]
 }): Promise<CountryPage> {
-  if (codes && codes.length === 0) return { countries: [], total: 0, pages: 1, page: 1 }
-
   const regions = region
     ? region
     : [...new Set((await getCountries()).map((c) => c.region.id))].sort().join(";")
-  const path = codes ? ENDPOINTS.country(codes) : ENDPOINTS.countries
   const fetchPage = (p: number) =>
-    wbFetch<WbCountryRaw>(path, { region: regions, per_page: PAGE_SIZE, page: p }, { paged: true })
+    wbFetch<WbCountryRaw>(ENDPOINTS.countries, { region: regions, per_page: PAGE_SIZE, page: p }, { paged: true })
 
   let { meta, rows } = await fetchPage(Math.max(1, page))
   const pages = Math.max(1, Number(meta.pages))
@@ -153,13 +178,15 @@ export const getIndicatorSeries = cache(
     to: number = new Date().getFullYear()
   ): Promise<Observation[]> => {
     if (codes.length === 0) return []
+    // Always the full history, so changing the year range reuses the cached response.
     const { rows } = await wbFetch<WbObservationRaw>(
       ENDPOINTS.countryIndicator(codes, indicator),
-      { date: `${from}:${to}`, per_page: 2000 }
+      { date: `${FIRST_YEAR}:${new Date().getFullYear()}`, per_page: 2000 }
     )
     return rows
       .filter((row) => row.countryiso3code)
       .map(normalizeObservation)
+      .filter((o) => o.year >= from && o.year <= to)
       .sort((a, b) => a.year - b.year)
   }
 )

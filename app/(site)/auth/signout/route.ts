@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-import { createClient } from "@/lib/supabase/server"
+import { signOut } from "@/auth"
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
+  await signOut({ redirect: false })
   return NextResponse.redirect(new URL("/countries", request.nextUrl.origin), { status: 303 })
 }

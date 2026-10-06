@@ -6,9 +6,20 @@ import { cleanup } from "@testing-library/react"
 
 import { fetchMock, resetFetch, takeUnmatched } from "./mock-fetch"
 import { resetNavigation } from "./navigation"
-import { resetFakeSupabase } from "./supabase"
+import { resetFakeAuth } from "./auth"
 
 vi.mock("next/navigation", async () => (await import("./navigation")).navigationMock)
+
+// `connection()` throws outside a real request; tests render pages directly.
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  connection: async () => {},
+}))
+
+// Auth.js and Postgres: see auth.ts and db.ts. The database only boots in files that use it.
+vi.mock("@/auth", () => import("./auth"))
+vi.mock("@/lib/auth/env", () => import("./auth"))
+vi.mock("@/lib/db", () => import("./db"))
 
 vi.mock("sonner", () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() }),
@@ -42,8 +53,9 @@ if (typeof window !== "undefined") {
   Element.prototype.releasePointerCapture ??= function () {}
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.stubGlobal("fetch", fetchMock)
+  await (globalThis as { __resetTestDb?: () => Promise<void> }).__resetTestDb?.()
 })
 
 afterEach(async () => {
@@ -53,7 +65,7 @@ afterEach(async () => {
   vi.unstubAllGlobals()
   resetFetch()
   resetNavigation()
-  resetFakeSupabase()
+  resetFakeAuth()
   // Client stores only exist in jsdom tests. Importing them lazily keeps node-env
   // workers from touching Node's experimental localStorage global.
   if (typeof window !== "undefined") {

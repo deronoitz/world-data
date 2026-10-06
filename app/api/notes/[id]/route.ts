@@ -1,5 +1,6 @@
-import { HttpError, check, json, readJson, withUser } from "@/lib/api/route"
+import { HttpError, json, readJson, withUser } from "@/lib/api/route"
 import { ValidationError, asRecord, isUuid, text } from "@/lib/api/validate"
+import { removeNote, updateNote } from "@/lib/data/notes"
 
 type Ctx = RouteContext<"/api/notes/[id]">
 
@@ -9,23 +10,15 @@ async function idFrom(ctx: Ctx) {
   return id
 }
 
-export const PATCH = withUser<Ctx>(async ({ req, ctx, supabase }) => {
+export const PATCH = withUser<Ctx>(async ({ req, ctx, userId }) => {
   const id = await idFrom(ctx)
   const body = asRecord(await readJson(req))
-  const { data, error } = await supabase
-    .from("country_notes")
-    .update({ body: text(body.body, "body", 5000) })
-    .eq("id", id)
-    .select()
-    .maybeSingle()
-  check(error)
-  if (!data) throw new HttpError(404, "Note not found")
-  return json(data)
+  const row = await updateNote(userId, id, text(body.body, "body", 5000))
+  if (!row) throw new HttpError(404, "Note not found")
+  return json(row)
 })
 
-export const DELETE = withUser<Ctx>(async ({ ctx, supabase }) => {
-  const id = await idFrom(ctx)
-  const { error } = await supabase.from("country_notes").delete().eq("id", id)
-  check(error)
+export const DELETE = withUser<Ctx>(async ({ ctx, userId }) => {
+  await removeNote(userId, await idFrom(ctx))
   return new Response(null, { status: 204 })
 })

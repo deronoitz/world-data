@@ -3,12 +3,9 @@ import { screen } from "@testing-library/react"
 import { WB, wbCountry, wbPage } from "@/test-kit/app-fixtures"
 import { mockFetch } from "@/test-kit/mock-fetch"
 import { renderServer } from "@/test-kit/server"
-import { setupSupabase } from "@/test-kit/supabase"
+import { setupAuth } from "@/test-kit/auth"
 
 import { CountryPanel } from "../CountryPanel"
-
-vi.mock("@/lib/supabase/server", () => import("@/test-kit/supabase"))
-vi.mock("@/lib/supabase/env", () => import("@/test-kit/supabase"))
 
 const IDN = wbCountry("IDN", "Indonesia")
 const BRA = wbCountry("BRA", "Brazil", { region: ["LCN", "Latin America & Caribbean"] })
@@ -28,7 +25,7 @@ describe("CountryPanel", () => {
   })
 
   it("explains an empty favorites tab", async () => {
-    setupSupabase({ user: null })
+    setupAuth({ user: null })
 
     await renderServer(CountryPanel({ params: { tab: "favorites" } }))
 

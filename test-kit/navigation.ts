@@ -30,4 +30,9 @@ export const navigationMock = {
   useParams: () => ({}),
   redirect: vi.fn(),
   notFound: vi.fn(),
+  // Like the real one: rethrows Next's internal redirect / not-found errors.
+  unstable_rethrow: (error: unknown) => {
+    const digest = (error as { digest?: unknown } | null)?.digest
+    if (typeof digest === "string" && /^NEXT_(REDIRECT|HTTP_ERROR_FALLBACK)/.test(digest)) throw error
+  },
 }
