@@ -9,22 +9,23 @@ import { FavoriteButton } from "@/components/countries/FavoriteButton"
 import { ChartError } from "@/components/indicators/ChartError"
 import { IndicatorHistory } from "@/components/indicators/IndicatorHistory"
 import { IndicatorSelect } from "@/components/indicators/IndicatorSelect"
-import { KpiCard } from "@/components/indicators/KpiCard"
+import { LatestKpiCard } from "@/components/indicators/LatestKpiCard"
 import { PinIndicatorButton } from "@/components/indicators/PinIndicatorButton"
 import { YearRange } from "@/components/indicators/YearRange"
 import { LocatorMap } from "@/components/map/LocatorMap"
 import { CountryNotes } from "@/components/notes/CountryNotes"
-import { ChartSkeleton, KpiSkeleton } from "@/components/Skeletons"
+import { ChartSkeleton, KpiSkeleton } from "@/components/shared/Skeletons"
 import { Badge } from "@/components/ui/Badge"
 import { Button } from "@/components/ui/Button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
-import { firstParam } from "@/lib/countries"
-import { flagEmoji } from "@/lib/format"
-import { DEFAULT_INDICATORS, getIndicator, isIndicatorCode, resolveIndicator } from "@/lib/indicators"
-import { getSavedIndicatorCodes } from "@/lib/library"
-import { getCountry, getIndicatorSeries, recoverWith } from "@/lib/worldbank/client"
-import type { Country } from "@/lib/worldbank/types"
-import { parseYearRange } from "@/lib/years"
+import { firstParam } from "@/lib/domain/country"
+import { flagEmoji } from "@/lib/utils/format"
+import { DEFAULT_INDICATORS, getIndicator, isIndicatorCode, resolveIndicator } from "@/lib/domain/indicator"
+import { getSavedIndicatorCodes } from "@/lib/server/services/library"
+import { recoverWith } from "@/lib/server/worldbank/http"
+import { getCountry, getIndicatorSeries } from "@/lib/server/worldbank/queries"
+import type { Country } from "@/lib/domain/country"
+import { parseYearRange } from "@/lib/domain/year"
 
 export async function generateMetadata({ params }: PageProps<"/countries/[code]">): Promise<Metadata> {
   const country = await getCountry((await params).code)
@@ -63,7 +64,7 @@ export default async function CountryPage({ params, searchParams }: PageProps<"/
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
               {DEFAULT_INDICATORS.map((indicatorCode) => (
                 <Suspense key={indicatorCode} fallback={<KpiSkeleton />}>
-                  <KpiCard
+                  <LatestKpiCard
                     countryCode={country.code}
                     indicator={getIndicator(indicatorCode)!}
                     active={indicator.code === indicatorCode}
@@ -160,7 +161,7 @@ async function PinnedKpis({
   )
   return pinned.map((indicatorCode) => (
     <Suspense key={indicatorCode} fallback={<KpiSkeleton />}>
-      <KpiCard
+      <LatestKpiCard
         countryCode={countryCode}
         indicator={getIndicator(indicatorCode)!}
         active={activeCode === indicatorCode}

@@ -4,7 +4,7 @@ import { TerminalIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/Button"
 import { Spinner } from "@/components/ui/Spinner"
-import { signInAsDevUser } from "@/lib/auth/actions"
+import { signInAsDevUser } from "@/lib/server/auth/actions"
 
 import { useSignInAction } from "./hooks/useSignInAction"
 

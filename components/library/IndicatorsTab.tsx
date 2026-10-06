@@ -3,13 +3,13 @@
 import { useRouter } from "next/navigation"
 import { ArrowDownIcon, ArrowUpIcon, PinIcon, PinOffIcon } from "lucide-react"
 
+import { EmptyState } from "@/components/shared/EmptyState"
 import { Button } from "@/components/ui/Button"
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
-import { getIndicator } from "@/lib/indicators"
+import { getIndicator } from "@/lib/domain/indicator"
 import { useUserData } from "@/stores/user-data-store"
 
 import { moveItem } from "./helpers/move-item"
-import { LibraryEmptyState } from "./LibraryEmptyState"
 
 export function IndicatorsTab() {
   const router = useRouter()
@@ -19,9 +19,9 @@ export function IndicatorsTab() {
 
   if (savedIndicators.length === 0) {
     return (
-      <LibraryEmptyState icon={PinIcon} title="No pinned indicators">
+      <EmptyState icon={PinIcon} title="No pinned indicators">
         Pin an indicator on a country page to show it on every country.
-      </LibraryEmptyState>
+      </EmptyState>
     )
   }
 

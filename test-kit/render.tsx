@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event"
 
 import { TEST_SESSION_USER } from "./session"
 import { setUrl } from "./navigation"
-import { useUserData, type SessionUser } from "@/stores/user-data-store"
+import type { SessionUser } from "@/lib/domain/user"
+import { useUserData } from "@/stores/user-data-store"
 
 /**
  * Render a client component with a userEvent instance. `url` sets what

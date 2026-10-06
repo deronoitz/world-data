@@ -1,5 +1,5 @@
-import { flagEmoji, formatValue } from "@/lib/format"
-import type { Indicator } from "@/lib/indicators"
+import { flagEmoji, formatValue } from "@/lib/utils/format"
+import type { Indicator } from "@/lib/domain/indicator"
 
 import type { MapTip } from "./helpers/types"
 

@@ -1,4 +1,4 @@
-import type { ComparisonRow, NoteRow } from "@/lib/db/types"
+import type { ComparisonRow, NoteRow } from "@/lib/domain/library"
 
 import type { CountryLookup } from "../helpers/types"
 

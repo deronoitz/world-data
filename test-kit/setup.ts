@@ -18,8 +18,8 @@ vi.mock("next/server", async (importOriginal) => ({
 
 // Auth.js and Postgres: see auth.ts and db.ts. The database only boots in files that use it.
 vi.mock("@/auth", () => import("./auth"))
-vi.mock("@/lib/auth/env", () => import("./auth"))
-vi.mock("@/lib/db", () => import("./db"))
+vi.mock("@/lib/server/auth/env", () => import("./auth"))
+vi.mock("@/lib/server/db/client", () => import("./db"))
 
 vi.mock("sonner", () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() }),

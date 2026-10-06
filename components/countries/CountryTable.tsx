@@ -12,8 +12,8 @@ import {
   EmptyTitle,
 } from "@/components/ui/Empty"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table"
-import { flagEmoji } from "@/lib/format"
-import type { Country } from "@/lib/worldbank/types"
+import { flagEmoji } from "@/lib/utils/format"
+import type { Country } from "@/lib/domain/country"
 import { useMapHover } from "@/stores/map-hover-store"
 
 import { CompareButton } from "./CompareButton"

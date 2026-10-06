@@ -3,8 +3,8 @@ import { redirect } from "next/navigation"
 import { connection } from "next/server"
 
 import { LibraryView } from "@/components/library/LibraryView"
-import { getUser } from "@/lib/auth/session"
-import { getCountries } from "@/lib/worldbank/client"
+import { getUser } from "@/lib/server/auth/session"
+import { getCountries } from "@/lib/server/worldbank/queries"
 
 export const metadata: Metadata = { title: "My library" }
 

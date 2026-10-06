@@ -1,6 +1,7 @@
 // An in-process Postgres (PGlite) with the real migrations applied. setup.ts
-// points `@/lib/db` at it for every integration test, so lib/data/* runs real
-// SQL, including the CHECK and unique constraints, without a database server.
+// points `@/lib/server/db/client` at it for every integration test, so
+// lib/server/repositories/* runs real SQL, including the CHECK and unique
+// constraints, without a database server.
 //
 // Each test starts with empty tables plus TEST_USER and OTHER_USER.
 
@@ -11,7 +12,7 @@ import { sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/pglite"
 import { migrate } from "drizzle-orm/pglite/migrator"
 
-import * as schema from "@/lib/db/schema"
+import * as schema from "@/lib/server/db/schema"
 
 import { OTHER_USER, TEST_USER } from "./auth"
 

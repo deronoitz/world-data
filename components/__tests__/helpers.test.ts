@@ -8,7 +8,7 @@ import { comparisonHref } from "@/components/library/helpers/comparison-href"
 import { groupNotesByCountry } from "@/components/library/helpers/group-notes"
 import { moveItem } from "@/components/library/helpers/move-item"
 import { MAP_COLORS, buildColorScale } from "@/components/map/helpers/color-scale"
-import type { ComparisonRow, NoteRow } from "@/lib/db/types"
+import type { ComparisonRow, NoteRow } from "@/lib/domain/library"
 
 describe("pageList", () => {
   it("lists every page up to 7", () => {

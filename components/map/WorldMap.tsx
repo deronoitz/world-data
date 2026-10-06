@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation"
 import { geoPath } from "d3-geo"
 
 import { Skeleton } from "@/components/ui/Skeleton"
-import { formatValue } from "@/lib/format"
-import type { Indicator } from "@/lib/indicators"
-import type { LatestByCountry } from "@/lib/worldbank/types"
+import { formatValue } from "@/lib/utils/format"
+import type { Indicator } from "@/lib/domain/indicator"
+import type { LatestByCountry } from "@/lib/domain/indicator"
 import { useUserData } from "@/stores/user-data-store"
 
 import { CountryShape } from "./CountryShape"

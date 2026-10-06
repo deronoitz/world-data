@@ -3,7 +3,7 @@ import { toast } from "sonner"
 
 import { fetchRequests, mockFetch, reply } from "@/test-kit/mock-fetch"
 import { renderWithProviders } from "@/test-kit/render"
-import type { ComparisonRow } from "@/lib/db/types"
+import type { ComparisonRow } from "@/lib/domain/library"
 import { useUserData } from "@/stores/user-data-store"
 
 import { SaveComparisonDialog } from "../SaveComparisonDialog"

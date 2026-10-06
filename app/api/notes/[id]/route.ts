@@ -1,6 +1,7 @@
-import { HttpError, json, readJson, withUser } from "@/lib/api/route"
-import { ValidationError, asRecord, isUuid, text } from "@/lib/api/validate"
-import { removeNote, updateNote } from "@/lib/data/notes"
+import { HttpError, json, readJson, withUser } from "@/lib/server/http/handler"
+import { ValidationError, asRecord, isUuid, text } from "@/lib/server/http/validate"
+import { removeNote, updateNote } from "@/lib/server/repositories/notes"
+import { NOTE_BODY_MAX } from "@/lib/domain/library"
 
 type Ctx = RouteContext<"/api/notes/[id]">
 
@@ -13,7 +14,7 @@ async function idFrom(ctx: Ctx) {
 export const PATCH = withUser<Ctx>(async ({ req, ctx, userId }) => {
   const id = await idFrom(ctx)
   const body = asRecord(await readJson(req))
-  const row = await updateNote(userId, id, text(body.body, "body", 5000))
+  const row = await updateNote(userId, id, text(body.body, "body", NOTE_BODY_MAX))
   if (!row) throw new HttpError(404, "Note not found")
   return json(row)
 })

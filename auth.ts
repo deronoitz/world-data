@@ -2,10 +2,10 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import Google from "next-auth/providers/google"
 
-import { createAdapter } from "@/lib/auth/adapter"
-import { upsertDevUser } from "@/lib/auth/dev-login"
-import { isDevLoginEnabled } from "@/lib/auth/env"
-import { db } from "@/lib/db"
+import { createAdapter } from "@/lib/server/auth/adapter"
+import { upsertDevUser } from "@/lib/server/auth/dev-login"
+import { isDevLoginEnabled } from "@/lib/server/auth/env"
+import { db } from "@/lib/server/db/client"
 
 // Google sign-in, with users and linked accounts (no OAuth tokens) stored in
 // Postgres. Sessions are stateless JWT cookies. Reads AUTH_SECRET, AUTH_GOOGLE_ID
@@ -16,7 +16,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Google,
     ...(isDevLoginEnabled
-      ? [Credentials({ id: "dev", name: "Dev login", credentials: {}, authorize: () => upsertDevUser(db) })]
+      ? [Credentials({ id: "dev", name: "Dev login", credentials: {}, authorize: () => upsertDevUser() })]
       : []),
   ],
   session: { strategy: "jwt" },

@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { comparisons } from "@/lib/db/schema"
+import { comparisons } from "@/lib/server/db/schema"
 import { OTHER_USER, TEST_USER } from "@/test-kit/auth"
 import { db } from "@/test-kit/db"
 import { callRoute } from "@/test-kit/route"

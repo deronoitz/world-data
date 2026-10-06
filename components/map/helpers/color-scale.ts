@@ -1,6 +1,6 @@
 import { scaleLog, scaleQuantize, scaleLinear } from "d3-scale"
 
-import type { Indicator } from "@/lib/indicators"
+import type { Indicator } from "@/lib/domain/indicator"
 
 export const MAP_STEPS = 7
 export const MAP_COLORS = Array.from({ length: MAP_STEPS }, (_, i) => `var(--map-${i + 1})`)

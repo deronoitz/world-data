@@ -1,6 +1,6 @@
 import { screen, within } from "@testing-library/react"
 
-import { LAST_YEAR } from "@/lib/years"
+import { LAST_YEAR } from "@/lib/domain/year"
 import { router } from "@/test-kit/navigation"
 import { renderWithProviders } from "@/test-kit/render"
 

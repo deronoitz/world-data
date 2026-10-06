@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/Button"
 import { Spinner } from "@/components/ui/Spinner"
-import { signInWithGoogle } from "@/lib/auth/actions"
+import { signInWithGoogle } from "@/lib/server/auth/actions"
 
 import { useSignInAction } from "./hooks/useSignInAction"
 

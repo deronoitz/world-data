@@ -1,7 +1,7 @@
 // Fake Auth.js for integration tests. setup.ts swaps it in for every test:
 //
 //   vi.mock("@/auth", () => import("./auth"))
-//   vi.mock("@/lib/auth/env", () => import("./auth"))
+//   vi.mock("@/lib/server/auth/env", () => import("./auth"))
 //
 // A test signs a user in or out with `setupAuth({ user })`. The default is
 // TEST_USER, signed in.
@@ -42,7 +42,7 @@ export const handlers = {
   POST: vi.fn(async () => new Response(null)),
 }
 
-// --- `@/lib/auth/env` surface (live bindings, toggled by setAuthConfigured / setProviders) ---
+// --- `@/lib/server/auth/env` surface (live bindings, toggled by setAuthConfigured / setProviders) ---
 
 export let isAuthConfigured = true
 export let isGoogleConfigured = true
@@ -52,7 +52,7 @@ export function setAuthConfigured(value: boolean) {
   isAuthConfigured = value
 }
 
-/** Which sign-in providers `@/lib/auth/env` reports (default: Google only). */
+/** Which sign-in providers `@/lib/server/auth/env` reports (default: Google only). */
 export function setProviders({ google = true, devLogin = false }: { google?: boolean; devLogin?: boolean }) {
   isGoogleConfigured = google
   isDevLoginEnabled = devLogin

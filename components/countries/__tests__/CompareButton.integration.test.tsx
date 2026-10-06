@@ -1,8 +1,9 @@
 import { screen } from "@testing-library/react"
 import { toast } from "sonner"
 
+import { MAX_COMPARE } from "@/lib/domain/library"
+import { useCompare } from "@/stores/compare-store"
 import { renderWithProviders } from "@/test-kit/render"
-import { MAX_COMPARE, useCompare } from "@/stores/compare-store"
 
 import { CompareButton } from "../CompareButton"
 

@@ -1,12 +1,12 @@
 // Applies ./migrations to the database. Used by `pnpm db:migrate`, which runs in
 // the Vercel build (`vercel-build`) and in Dockerfile.dev, so drizzle-kit is not
-// needed at deploy time. See lib/db/migration-target.ts for which database.
+// needed at deploy time. See lib/server/db/migration-target.ts for which database.
 
 import { drizzle } from "drizzle-orm/postgres-js"
 import { migrate } from "drizzle-orm/postgres-js/migrator"
 import postgres from "postgres"
 
-import { migrationTarget } from "../lib/db/migration-target.ts"
+import { migrationTarget } from "../lib/server/db/migration-target.ts"
 
 const target = migrationTarget(process.env)
 if ("skip" in target) {

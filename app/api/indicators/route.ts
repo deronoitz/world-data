@@ -1,10 +1,10 @@
-import { HttpError, json, readJson, withUser } from "@/lib/api/route"
-import { ValidationError, asRecord, indicatorCode } from "@/lib/api/validate"
+import { HttpError, json, readJson, withUser } from "@/lib/server/http/handler"
+import { ValidationError, asRecord, indicatorCode } from "@/lib/server/http/validate"
 import {
   addSavedIndicator,
   listSavedIndicators,
   reorderSavedIndicators,
-} from "@/lib/data/indicators"
+} from "@/lib/server/repositories/saved-indicators"
 
 export const GET = withUser(async ({ userId }) => json(await listSavedIndicators(userId)))
 

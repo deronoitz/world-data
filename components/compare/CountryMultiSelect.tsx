@@ -15,9 +15,10 @@ import {
   CommandList,
 } from "@/components/ui/Command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/Popover"
-import { flagEmoji } from "@/lib/format"
-import { useSearchParamUpdater } from "@/lib/use-search-param-updater"
-import { MAX_COMPARE, useCompare } from "@/stores/compare-store"
+import { flagEmoji } from "@/lib/utils/format"
+import { useSearchParamUpdater } from "@/lib/client/hooks/use-search-param-updater"
+import { MAX_COMPARE } from "@/lib/domain/library"
+import { useCompare } from "@/stores/compare-store"
 
 export type CountryOption = { code: string; name: string; iso2: string }
 

@@ -3,9 +3,7 @@
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 
-import { MAX_COMPARE } from "@/lib/compare"
-
-export { MAX_COMPARE }
+import { MAX_COMPARE } from "@/lib/domain/library"
 
 type CompareState = {
   countries: string[]

@@ -1,6 +1,6 @@
 import { screen, within } from "@testing-library/react"
 
-import { getIndicator } from "@/lib/indicators"
+import { getIndicator } from "@/lib/domain/indicator"
 import { renderWithProviders } from "@/test-kit/render"
 
 import { IndicatorHistory } from "../IndicatorHistory"

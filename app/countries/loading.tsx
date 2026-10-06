@@ -1,4 +1,4 @@
-import { MapSkeleton, PanelSkeleton } from "@/components/Skeletons"
+import { MapSkeleton, PanelSkeleton } from "@/components/shared/Skeletons"
 
 export default function Loading() {
   return (

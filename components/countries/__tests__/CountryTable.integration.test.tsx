@@ -2,7 +2,7 @@ import { fireEvent, screen, within } from "@testing-library/react"
 
 import { router } from "@/test-kit/navigation"
 import { renderWithProviders } from "@/test-kit/render"
-import type { Country } from "@/lib/worldbank/types"
+import type { Country } from "@/lib/domain/country"
 import { useMapHover } from "@/stores/map-hover-store"
 import { useUserData } from "@/stores/user-data-store"
 

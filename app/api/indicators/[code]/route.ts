@@ -1,6 +1,6 @@
-import { withUser } from "@/lib/api/route"
-import { indicatorCode } from "@/lib/api/validate"
-import { removeSavedIndicator } from "@/lib/data/indicators"
+import { withUser } from "@/lib/server/http/handler"
+import { indicatorCode } from "@/lib/server/http/validate"
+import { removeSavedIndicator } from "@/lib/server/repositories/saved-indicators"
 
 export const DELETE = withUser<RouteContext<"/api/indicators/[code]">>(async ({ ctx, userId }) => {
   const code = indicatorCode(decodeURIComponent((await ctx.params).code), "code")

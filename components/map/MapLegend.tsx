@@ -1,6 +1,6 @@
-import { formatAxis } from "@/lib/format"
+import { formatAxis } from "@/lib/utils/format"
 import { cn } from "@/lib/utils"
-import type { Indicator } from "@/lib/indicators"
+import type { Indicator } from "@/lib/domain/indicator"
 
 import { MAP_COLORS } from "./helpers/color-scale"
 

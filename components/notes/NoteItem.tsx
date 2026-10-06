@@ -4,16 +4,22 @@ import { useState } from "react"
 import { PencilIcon, Trash2Icon } from "lucide-react"
 
 import { Button } from "@/components/ui/Button"
-import { formatDate } from "@/lib/format"
-import type { NoteRow } from "@/lib/db/types"
-import { useUserData } from "@/stores/user-data-store"
+import { formatDate } from "@/lib/utils/format"
+import type { NoteRow } from "@/lib/domain/library"
 
 import { NoteEditor } from "./NoteEditor"
 
-export function NoteItem({ note }: { note: NoteRow }) {
+export function NoteItem({
+  note,
+  onUpdate,
+  onDelete,
+}: {
+  note: NoteRow
+  /** Resolves true when saved, which closes the editor. */
+  onUpdate: (body: string) => Promise<boolean>
+  onDelete: () => void
+}) {
   const [editing, setEditing] = useState(false)
-  const updateNote = useUserData((s) => s.updateNote)
-  const deleteNote = useUserData((s) => s.deleteNote)
 
   if (editing) {
     return (
@@ -22,7 +28,7 @@ export function NoteItem({ note }: { note: NoteRow }) {
         submitLabel="Save"
         onCancel={() => setEditing(false)}
         onSubmit={async (body) => {
-          const ok = await updateNote(note.id, body)
+          const ok = await onUpdate(body)
           if (ok) setEditing(false)
           return ok
         }}
@@ -42,7 +48,7 @@ export function NoteItem({ note }: { note: NoteRow }) {
         <Button variant="ghost" size="icon-xs" aria-label="Edit note" onClick={() => setEditing(true)}>
           <PencilIcon />
         </Button>
-        <Button variant="ghost" size="icon-xs" aria-label="Delete note" onClick={() => void deleteNote(note.id)}>
+        <Button variant="ghost" size="icon-xs" aria-label="Delete note" onClick={onDelete}>
           <Trash2Icon />
         </Button>
       </div>

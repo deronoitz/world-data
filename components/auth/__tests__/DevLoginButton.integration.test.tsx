@@ -1,12 +1,12 @@
 import { screen, waitFor } from "@testing-library/react"
 import { toast } from "sonner"
 
-import { signInAsDevUser } from "@/lib/auth/actions"
+import { signInAsDevUser } from "@/lib/server/auth/actions"
 import { renderWithProviders } from "@/test-kit/render"
 
 import { DevLoginButton } from "../DevLoginButton"
 
-vi.mock("@/lib/auth/actions", () => ({ signInAsDevUser: vi.fn() }))
+vi.mock("@/lib/server/auth/actions", () => ({ signInAsDevUser: vi.fn() }))
 
 const NAME = "Dev login (local only)"
 

@@ -9,8 +9,8 @@ import { SessionSync } from "@/components/providers/SessionSync"
 import { ThemeProvider } from "@/components/providers/ThemeProvider"
 import { Toaster } from "@/components/ui/Sonner"
 import { TooltipProvider } from "@/components/ui/Tooltip"
-import { isDevLoginEnabled, isGoogleConfigured } from "@/lib/auth/env"
-import { getUser } from "@/lib/auth/session"
+import { isDevLoginEnabled, isGoogleConfigured } from "@/lib/server/auth/env"
+import { getUser } from "@/lib/server/auth/session"
 
 import "./globals.css"
 

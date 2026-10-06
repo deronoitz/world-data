@@ -4,13 +4,13 @@ import { useMemo } from "react"
 import Link from "next/link"
 import { NotebookPenIcon } from "lucide-react"
 
+import { EmptyState } from "@/components/shared/EmptyState"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
-import { flagEmoji, formatDate } from "@/lib/format"
+import { flagEmoji, formatDate } from "@/lib/utils/format"
 import { useUserData } from "@/stores/user-data-store"
 
 import { groupNotesByCountry } from "./helpers/group-notes"
 import type { CountryLookup } from "./helpers/types"
-import { LibraryEmptyState } from "./LibraryEmptyState"
 
 export function NotesTab({ countries }: { countries: CountryLookup }) {
   const notes = useUserData((s) => s.notes)
@@ -18,9 +18,9 @@ export function NotesTab({ countries }: { countries: CountryLookup }) {
 
   if (groups.length === 0) {
     return (
-      <LibraryEmptyState icon={NotebookPenIcon} title="No notes yet">
+      <EmptyState icon={NotebookPenIcon} title="No notes yet">
         Write notes from any country page.
-      </LibraryEmptyState>
+      </EmptyState>
     )
   }
 

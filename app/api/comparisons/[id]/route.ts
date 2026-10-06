@@ -1,4 +1,4 @@
-import { HttpError, json, readJson, withUser } from "@/lib/api/route"
+import { HttpError, json, readJson, withUser } from "@/lib/server/http/handler"
 import {
   ValidationError,
   asRecord,
@@ -7,9 +7,9 @@ import {
   isUuid,
   optionalYear,
   text,
-} from "@/lib/api/validate"
-import { removeComparison, updateComparison } from "@/lib/data/comparisons"
-import type { ComparisonUpdate } from "@/lib/db/types"
+} from "@/lib/server/http/validate"
+import { removeComparison, updateComparison } from "@/lib/server/repositories/comparisons"
+import { COMPARISON_NAME_MAX, type ComparisonUpdate } from "@/lib/domain/library"
 
 type Ctx = RouteContext<"/api/comparisons/[id]">
 
@@ -23,7 +23,7 @@ export const PATCH = withUser<Ctx>(async ({ req, ctx, userId }) => {
   const id = await idFrom(ctx)
   const body = asRecord(await readJson(req))
   const update: ComparisonUpdate = {}
-  if ("name" in body) update.name = text(body.name, "name", 120)
+  if ("name" in body) update.name = text(body.name, "name", COMPARISON_NAME_MAX)
   if ("country_codes" in body) update.country_codes = countryCodes(body.country_codes)
   if ("indicator_code" in body) update.indicator_code = indicatorCode(body.indicator_code)
   if ("year_from" in body) update.year_from = optionalYear(body.year_from, "year_from")

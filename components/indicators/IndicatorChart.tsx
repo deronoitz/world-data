@@ -10,9 +10,9 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/Chart"
-import { formatAxis, formatValue } from "@/lib/format"
-import type { Indicator } from "@/lib/indicators"
-import type { Observation } from "@/lib/worldbank/types"
+import { formatAxis, formatValue } from "@/lib/utils/format"
+import type { Indicator } from "@/lib/domain/indicator"
+import type { Observation } from "@/lib/domain/indicator"
 
 import { toChartRows, type SeriesCountry } from "./helpers/chart-rows"
 

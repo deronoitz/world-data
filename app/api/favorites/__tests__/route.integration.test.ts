@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { favoriteCountries } from "@/lib/db/schema"
+import { favoriteCountries } from "@/lib/server/db/schema"
 import { OTHER_USER, TEST_USER, setAuthConfigured, setupAuth } from "@/test-kit/auth"
 import { db } from "@/test-kit/db"
 import { callRoute } from "@/test-kit/route"

@@ -1,4 +1,4 @@
-import { ChartSkeleton, KpiSkeleton } from "@/components/Skeletons"
+import { ChartSkeleton, KpiSkeleton } from "@/components/shared/Skeletons"
 import { Skeleton } from "@/components/ui/Skeleton"
 
 export default function Loading() {

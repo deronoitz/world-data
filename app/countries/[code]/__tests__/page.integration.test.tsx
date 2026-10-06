@@ -4,7 +4,7 @@ import { notFound } from "next/navigation"
 import { wbCountry, wbPage } from "@/test-kit/app-fixtures"
 import { fetchRequests, mockFetch, reply } from "@/test-kit/mock-fetch"
 import { renderServer } from "@/test-kit/server"
-import { savedIndicators } from "@/lib/db/schema"
+import { savedIndicators } from "@/lib/server/db/schema"
 import { TEST_USER, setupAuth } from "@/test-kit/auth"
 import { db } from "@/test-kit/db"
 

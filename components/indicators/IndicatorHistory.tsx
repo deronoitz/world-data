@@ -13,11 +13,11 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/Empty"
-import { formatValue } from "@/lib/format"
-import type { Indicator } from "@/lib/indicators"
-import type { Observation } from "@/lib/worldbank/types"
+import { formatValue } from "@/lib/utils/format"
+import type { Indicator } from "@/lib/domain/indicator"
+import type { Observation } from "@/lib/domain/indicator"
 
-import { ChartSkeleton } from "@/components/Skeletons"
+import { ChartSkeleton } from "@/components/shared/Skeletons"
 
 import { toChartRows, type SeriesCountry } from "./helpers/chart-rows"
 

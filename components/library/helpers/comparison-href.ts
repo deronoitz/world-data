@@ -1,4 +1,4 @@
-import type { ComparisonRow } from "@/lib/db/types"
+import type { ComparisonRow } from "@/lib/domain/library"
 
 /** Link that reopens a saved comparison on /compare. */
 export function comparisonHref(c: ComparisonRow) {

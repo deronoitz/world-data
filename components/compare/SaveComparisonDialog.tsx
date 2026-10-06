@@ -16,7 +16,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/Field"
 import { Input } from "@/components/ui/Input"
 import { Spinner } from "@/components/ui/Spinner"
-import { getIndicator } from "@/lib/indicators"
+import { getIndicator } from "@/lib/domain/indicator"
 import { useUserData } from "@/stores/user-data-store"
 
 export function SaveComparisonDialog({

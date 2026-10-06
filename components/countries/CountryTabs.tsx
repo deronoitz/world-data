@@ -1,7 +1,7 @@
 "use client"
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/Tabs"
-import { useSearchParamUpdater } from "@/lib/use-search-param-updater"
+import { useSearchParamUpdater } from "@/lib/client/hooks/use-search-param-updater"
 import { useUserData } from "@/stores/user-data-store"
 
 /** All / Favorites switch, bound to `?tab=`. */

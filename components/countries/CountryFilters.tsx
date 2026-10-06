@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/Select"
 import { Spinner } from "@/components/ui/Spinner"
-import { useSearchParamUpdater } from "@/lib/use-search-param-updater"
+import { useSearchParamUpdater } from "@/lib/client/hooks/use-search-param-updater"
 
 type Option = { id: string; name: string }
 

@@ -5,10 +5,10 @@ import { GlobeIcon } from "lucide-react"
 
 import { SignInOptions } from "@/components/auth/SignInOptions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
-import { firstParam } from "@/lib/countries"
-import { safeNext } from "@/lib/safe-next"
-import { isDevLoginEnabled, isGoogleConfigured } from "@/lib/auth/env"
-import { getUser } from "@/lib/auth/session"
+import { firstParam } from "@/lib/domain/country"
+import { safeNext } from "@/lib/utils/safe-next"
+import { isDevLoginEnabled, isGoogleConfigured } from "@/lib/server/auth/env"
+import { getUser } from "@/lib/server/auth/session"
 
 export const metadata: Metadata = { title: "Sign in" }
 

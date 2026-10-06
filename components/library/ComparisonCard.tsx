@@ -8,17 +8,24 @@ import { Badge } from "@/components/ui/Badge"
 import { Button } from "@/components/ui/Button"
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
 import { Input } from "@/components/ui/Input"
-import { flagEmoji, formatDate } from "@/lib/format"
-import { getIndicator } from "@/lib/indicators"
-import type { ComparisonRow } from "@/lib/db/types"
-import { useUserData } from "@/stores/user-data-store"
+import { flagEmoji, formatDate } from "@/lib/utils/format"
+import { getIndicator } from "@/lib/domain/indicator"
+import { COMPARISON_NAME_MAX, type ComparisonRow } from "@/lib/domain/library"
 
 import { comparisonHref } from "./helpers/comparison-href"
 import type { CountryLookup } from "./helpers/types"
 
-export function ComparisonCard({ comparison, countries }: { comparison: ComparisonRow; countries: CountryLookup }) {
-  const rename = useUserData((s) => s.renameComparison)
-  const remove = useUserData((s) => s.deleteComparison)
+export function ComparisonCard({
+  comparison,
+  countries,
+  onRename,
+  onDelete,
+}: {
+  comparison: ComparisonRow
+  countries: CountryLookup
+  onRename: (name: string) => void
+  onDelete: () => void
+}) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(comparison.name)
   const indicator = getIndicator(comparison.indicator_code)
@@ -31,14 +38,14 @@ export function ComparisonCard({ comparison, countries }: { comparison: Comparis
             className="flex items-center gap-1"
             onSubmit={(e) => {
               e.preventDefault()
-              if (name.trim()) void rename(comparison.id, name.trim())
+              if (name.trim()) onRename(name.trim())
               setEditing(false)
             }}
           >
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              maxLength={120}
+              maxLength={COMPARISON_NAME_MAX}
               aria-label="Comparison name"
               autoFocus
             />
@@ -76,7 +83,7 @@ export function ComparisonCard({ comparison, countries }: { comparison: Comparis
             <Button variant="ghost" size="icon-sm" aria-label="Rename" onClick={() => setEditing(true)}>
               <PencilIcon />
             </Button>
-            <Button variant="ghost" size="icon-sm" aria-label="Delete" onClick={() => void remove(comparison.id)}>
+            <Button variant="ghost" size="icon-sm" aria-label="Delete" onClick={onDelete}>
               <Trash2Icon />
             </Button>
           </CardAction>

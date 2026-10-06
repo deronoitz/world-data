@@ -1,4 +1,4 @@
-import type { Observation } from "@/lib/worldbank/types"
+import type { Observation } from "@/lib/domain/indicator"
 
 export type SeriesCountry = { code: string; name: string }
 

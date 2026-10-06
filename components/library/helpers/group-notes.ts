@@ -1,4 +1,4 @@
-import type { NoteRow } from "@/lib/db/types"
+import type { NoteRow } from "@/lib/domain/library"
 
 import type { CountryLookup } from "./types"
 

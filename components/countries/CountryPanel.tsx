@@ -1,15 +1,15 @@
 import { ScrollArea } from "@/components/ui/ScrollArea"
-import { PAGE_SIZE } from "@/lib/countries"
+import { COUNTRY_PAGE_SIZE } from "@/lib/domain/country"
+import { loadCountryPage, type PanelParams } from "@/lib/server/services/country-page"
 
 import { CountryPagination } from "./CountryPagination"
 import { CountryTable } from "./CountryTable"
-import { loadCountryPage, type PanelParams } from "./helpers/load-country-page"
 
 export type { PanelParams }
 
 export async function CountryPanel({ params }: { params: PanelParams }) {
   const { countries, total, pages, page } = await loadCountryPage(params)
-  const first = (page - 1) * PAGE_SIZE + 1
+  const first = (page - 1) * COUNTRY_PAGE_SIZE + 1
 
   return (
     <>

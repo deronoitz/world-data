@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 // The store persists to localStorage.
 
-import { MAX_COMPARE, useCompare } from "../compare-store"
+import { MAX_COMPARE } from "@/lib/domain/library"
+
+import { useCompare } from "../compare-store"
 
 const state = () => useCompare.getState()
 

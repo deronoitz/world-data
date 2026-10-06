@@ -1,6 +1,7 @@
-import { json, readJson, withUser } from "@/lib/api/route"
-import { ValidationError, asRecord, countryCodes, indicatorCode, optionalYear, text } from "@/lib/api/validate"
-import { createComparison, listComparisons } from "@/lib/data/comparisons"
+import { json, readJson, withUser } from "@/lib/server/http/handler"
+import { ValidationError, asRecord, countryCodes, indicatorCode, optionalYear, text } from "@/lib/server/http/validate"
+import { createComparison, listComparisons } from "@/lib/server/repositories/comparisons"
+import { COMPARISON_NAME_MAX } from "@/lib/domain/library"
 
 export const GET = withUser(async ({ userId }) => json(await listComparisons(userId)))
 
@@ -13,7 +14,7 @@ export const POST = withUser(async ({ req, userId }) => {
   }
 
   const row = await createComparison(userId, {
-    name: text(body.name, "name", 120),
+    name: text(body.name, "name", COMPARISON_NAME_MAX),
     country_codes: countryCodes(body.country_codes),
     indicator_code: indicatorCode(body.indicator_code),
     year_from: yearFrom,

@@ -1,13 +1,13 @@
 import { screen, waitFor } from "@testing-library/react"
 import { toast } from "sonner"
 
-import { signInWithGoogle } from "@/lib/auth/actions"
+import { signInWithGoogle } from "@/lib/server/auth/actions"
 import { renderWithProviders } from "@/test-kit/render"
 
 import { GoogleButton } from "../GoogleButton"
 
 // The server action redirects to Google; here it just never returns.
-vi.mock("@/lib/auth/actions", () => ({ signInWithGoogle: vi.fn() }))
+vi.mock("@/lib/server/auth/actions", () => ({ signInWithGoogle: vi.fn() }))
 
 // Stands in for the redirect: pending until the test ends. React keeps every
 // transition pending while any async action is in flight, so settle it afterwards.

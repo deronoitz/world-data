@@ -3,22 +3,11 @@
 import { toast } from "sonner"
 import { create } from "zustand"
 
-import { api } from "@/lib/api/client"
-import type { ComparisonRow, NoteRow, SavedIndicatorRow, FavoriteRow } from "@/lib/db/types"
-
-export type SessionUser = {
-  id: string
-  email: string | null
-  name: string | null
-  avatarUrl: string | null
-}
+import { comparisonsApi, favoritesApi, indicatorsApi, notesApi } from "@/lib/client/api/library"
+import type { ComparisonRow, NewComparison, NoteRow } from "@/lib/domain/library"
+import type { SessionUser } from "@/lib/domain/user"
 
 type Status = "signed-out" | "loading" | "ready" | "error"
-
-export type NewComparison = Pick<
-  ComparisonRow,
-  "name" | "country_codes" | "indicator_code" | "year_from" | "year_to"
->
 
 type UserDataState = {
   user: SessionUser | null
@@ -78,10 +67,10 @@ export const useUserData = create<UserDataState>()((set, get) => ({
     set({ status: "loading" })
     try {
       const [favorites, indicators, comparisons, notes] = await Promise.all([
-        api<FavoriteRow[]>("/api/favorites"),
-        api<SavedIndicatorRow[]>("/api/indicators"),
-        api<ComparisonRow[]>("/api/comparisons"),
-        api<NoteRow[]>("/api/notes"),
+        favoritesApi.list(),
+        indicatorsApi.list(),
+        comparisonsApi.list(),
+        notesApi.list(),
       ])
       set({
         status: "ready",
@@ -111,8 +100,8 @@ export const useUserData = create<UserDataState>()((set, get) => ({
     const before = get().favorites
     set({ favorites: wasFavorite ? before.filter((c) => c !== code) : [code, ...before] })
     try {
-      if (wasFavorite) await api(`/api/favorites/${code}`, { method: "DELETE" })
-      else await api("/api/favorites", { method: "POST", body: { country_code: code } })
+      if (wasFavorite) await favoritesApi.remove(code)
+      else await favoritesApi.add(code)
     } catch (error) {
       set({ favorites: before })
       fail("Could not update favorites", error)
@@ -125,8 +114,8 @@ export const useUserData = create<UserDataState>()((set, get) => ({
     const pinned = before.includes(code)
     set({ savedIndicators: pinned ? before.filter((c) => c !== code) : [...before, code] })
     try {
-      if (pinned) await api(`/api/indicators/${encodeURIComponent(code)}`, { method: "DELETE" })
-      else await api("/api/indicators", { method: "POST", body: { indicator_code: code } })
+      if (pinned) await indicatorsApi.unpin(code)
+      else await indicatorsApi.pin(code)
     } catch (error) {
       set({ savedIndicators: before })
       fail("Could not update pinned indicators", error)
@@ -137,7 +126,7 @@ export const useUserData = create<UserDataState>()((set, get) => ({
     const before = get().savedIndicators
     set({ savedIndicators: order })
     try {
-      await api("/api/indicators", { method: "PUT", body: { order } })
+      await indicatorsApi.reorder(order)
     } catch (error) {
       set({ savedIndicators: before })
       fail("Could not reorder indicators", error)
@@ -147,7 +136,7 @@ export const useUserData = create<UserDataState>()((set, get) => ({
   saveComparison: async (input) => {
     if (!get().requireUser("Sign in to save comparisons.")) return null
     try {
-      const row = await api<ComparisonRow>("/api/comparisons", { method: "POST", body: input })
+      const row = await comparisonsApi.create(input)
       set({ comparisons: [row, ...get().comparisons] })
       toast.success("Comparison saved", { description: row.name })
       return row
@@ -161,7 +150,7 @@ export const useUserData = create<UserDataState>()((set, get) => ({
     const before = get().comparisons
     set({ comparisons: before.map((c) => (c.id === id ? { ...c, name } : c)) })
     try {
-      await api(`/api/comparisons/${id}`, { method: "PATCH", body: { name } })
+      await comparisonsApi.rename(id, name)
     } catch (error) {
       set({ comparisons: before })
       fail("Could not rename comparison", error)
@@ -172,7 +161,7 @@ export const useUserData = create<UserDataState>()((set, get) => ({
     const before = get().comparisons
     set({ comparisons: before.filter((c) => c.id !== id) })
     try {
-      await api(`/api/comparisons/${id}`, { method: "DELETE" })
+      await comparisonsApi.remove(id)
     } catch (error) {
       set({ comparisons: before })
       fail("Could not delete comparison", error)
@@ -182,10 +171,7 @@ export const useUserData = create<UserDataState>()((set, get) => ({
   addNote: async (countryCode, body) => {
     if (!get().requireUser("Sign in to write notes.")) return false
     try {
-      const row = await api<NoteRow>("/api/notes", {
-        method: "POST",
-        body: { country_code: countryCode, body },
-      })
+      const row = await notesApi.create(countryCode, body)
       set({ notes: [row, ...get().notes] })
       return true
     } catch (error) {
@@ -198,7 +184,7 @@ export const useUserData = create<UserDataState>()((set, get) => ({
     const before = get().notes
     set({ notes: before.map((n) => (n.id === id ? { ...n, body } : n)) })
     try {
-      const row = await api<NoteRow>(`/api/notes/${id}`, { method: "PATCH", body: { body } })
+      const row = await notesApi.update(id, body)
       set({ notes: get().notes.map((n) => (n.id === id ? row : n)) })
       return true
     } catch (error) {
@@ -212,7 +198,7 @@ export const useUserData = create<UserDataState>()((set, get) => ({
     const before = get().notes
     set({ notes: before.filter((n) => n.id !== id) })
     try {
-      await api(`/api/notes/${id}`, { method: "DELETE" })
+      await notesApi.remove(id)
     } catch (error) {
       set({ notes: before })
       fail("Could not delete note", error)

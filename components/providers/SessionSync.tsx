@@ -3,7 +3,8 @@
 import { use, useEffect } from "react"
 
 import { useCompare } from "@/stores/compare-store"
-import { useUserData, type SessionUser } from "@/stores/user-data-store"
+import type { SessionUser } from "@/lib/domain/user"
+import { useUserData } from "@/stores/user-data-store"
 
 /**
  * Seeds the user store from the server-verified user (streamed in as a promise

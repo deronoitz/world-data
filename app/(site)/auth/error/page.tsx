@@ -10,7 +10,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/Empty"
-import { firstParam } from "@/lib/countries"
+import { firstParam } from "@/lib/domain/country"
 
 // Auth.js redirects here with ?error=<type>.
 // https://authjs.dev/reference/core/errors

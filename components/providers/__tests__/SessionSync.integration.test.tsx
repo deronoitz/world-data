@@ -4,7 +4,8 @@ import { act, render, waitFor } from "@testing-library/react"
 import { fetchRequests, mockFetch } from "@/test-kit/mock-fetch"
 import { TEST_SESSION_USER } from "@/test-kit/session"
 import { useCompare } from "@/stores/compare-store"
-import { useUserData, type SessionUser } from "@/stores/user-data-store"
+import type { SessionUser } from "@/lib/domain/user"
+import { useUserData } from "@/stores/user-data-store"
 
 import { SessionSync } from "../SessionSync"
 

@@ -9,8 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/Select"
 import { Spinner } from "@/components/ui/Spinner"
-import { INDICATORS } from "@/lib/indicators"
-import { useSearchParamUpdater } from "@/lib/use-search-param-updater"
+import { INDICATORS } from "@/lib/domain/indicator"
+import { useSearchParamUpdater } from "@/lib/client/hooks/use-search-param-updater"
 
 const ITEMS = INDICATORS.map((i) => ({ value: i.code, label: i.label }))
 

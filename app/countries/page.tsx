@@ -8,10 +8,10 @@ import { CountryTabs } from "@/components/countries/CountryTabs"
 import { MapOverlay } from "@/components/countries/MapOverlay"
 import { WorldMap, type MapCountry } from "@/components/map/WorldMap"
 import { WORLD_GEO_URL } from "@/components/map/helpers/world-geo"
-import { MapSkeleton, PanelSkeleton } from "@/components/Skeletons"
-import { firstParam, regionOptions } from "@/lib/countries"
-import { resolveIndicator } from "@/lib/indicators"
-import { getCountries, getLatestForAll } from "@/lib/worldbank/client"
+import { MapSkeleton, PanelSkeleton } from "@/components/shared/Skeletons"
+import { firstParam, regionOptions } from "@/lib/domain/country"
+import { resolveIndicator } from "@/lib/domain/indicator"
+import { getCountries, getLatestForAll } from "@/lib/server/worldbank/queries"
 
 export const metadata: Metadata = { title: "Countries" }
 

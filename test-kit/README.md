@@ -1,11 +1,11 @@
 # test-kit
 
-Helpers for the `integration` Vitest project (`*.integration.test.ts(x)`). Integration tests run the real app code, such as route handlers, client components, zustand stores and `lib/api/client.ts`. They fake only the edges of the app:
+Helpers for the `integration` Vitest project (`*.integration.test.ts(x)`). Integration tests run the real app code, such as route handlers, client components, zustand stores and `lib/client/api`. They fake only the edges of the app:
 
 | Boundary | Fake | File |
 |---|---|---|
-| Auth.js (`@/auth`, `@/lib/auth/env`) | settable session user and `signIn`/`signOut` spies | `auth.ts` |
-| Postgres (`@/lib/db`) | real Postgres in-process (PGlite) with the migrations applied | `db.ts` |
+| Auth.js (`@/auth`, `@/lib/server/auth/env`) | settable session user and `signIn`/`signOut` spies | `auth.ts` |
+| Postgres (`@/lib/server/db/client`) | real Postgres in-process (PGlite) with the migrations applied | `db.ts` |
 | `fetch` (the app's `/api/*` and the World Bank API) | handlers matched by method and URL | `mock-fetch.ts` |
 | `next/navigation` | `router` spies, plus a settable pathname and search params | `navigation.ts` |
 | `sonner` | `toast` spies | `setup.ts` |
@@ -18,7 +18,7 @@ Route handler tests run under Node, so put `// @vitest-environment node` at the 
 
 ```ts
 // @vitest-environment node
-import { favoriteCountries } from "@/lib/db/schema"
+import { favoriteCountries } from "@/lib/server/db/schema"
 import { OTHER_USER, TEST_USER, setupAuth } from "@/test-kit/auth"
 import { db } from "@/test-kit/db"
 import { callRoute } from "@/test-kit/route"
@@ -36,7 +36,7 @@ it("deletes only the user's own favorite", async () => {
 ```
 
 - **Auth** (`auth.ts`): `TEST_USER` is signed in by default. `setupAuth({ user: null })` signs out (expect a 401), `setupAuth({ user: OTHER_USER })` switches user, and `setAuthConfigured(false)` simulates missing env vars (expect a 503). `setProviders({ google, devLogin })` picks the sign-in providers the env reports (default: Google only). `signIn` and `signOut` are spies.
-- **Database** (`db.ts`): `@/lib/db` points at an in-process [PGlite](https://pglite.dev) Postgres with `migrations/` applied, so queries, constraints and Postgres error codes are real. It only boots in files that import code using it. Before each test, every table is emptied and `users` holds `TEST_USER` and `OTHER_USER`. Seed rows with `db.insert(...)`. To simulate a database failure, `vi.spyOn(db, "select").mockImplementationOnce(() => { throw … })`.
+- **Database** (`db.ts`): `@/lib/server/db/client` points at an in-process [PGlite](https://pglite.dev) Postgres with `migrations/` applied, so queries, constraints and Postgres error codes are real. It only boots in files that import code using it. Before each test, every table is emptied and `users` holds `TEST_USER` and `OTHER_USER`. Seed rows with `db.insert(...)`. To simulate a database failure, `vi.spyOn(db, "select").mockImplementationOnce(() => { throw … })`.
 - `callRoute(handler, { method, path, body, params })` returns `{ status, headers, body }`. A string `body` is sent raw, which is how to test invalid JSON.
 
 ## Components and stores

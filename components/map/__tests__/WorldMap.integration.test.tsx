@@ -1,6 +1,6 @@
 import { act, fireEvent, screen } from "@testing-library/react"
 
-import { getIndicator } from "@/lib/indicators"
+import { getIndicator } from "@/lib/domain/indicator"
 import { useMapHover } from "@/stores/map-hover-store"
 import { useUserData } from "@/stores/user-data-store"
 import { MAP_COUNTRIES, TINY_WORLD, stubRect, stubSvgScreen } from "@/test-kit/map-fixtures"

@@ -2,28 +2,21 @@ import Link from "next/link"
 import { PinIcon } from "lucide-react"
 
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
-import { formatValue } from "@/lib/format"
-import type { Indicator } from "@/lib/indicators"
+import { formatValue } from "@/lib/utils/format"
+import type { Indicator, LatestValue } from "@/lib/domain/indicator"
 import { cn } from "@/lib/utils"
-import { getLatestValue, recoverWith } from "@/lib/worldbank/client"
 
-/** Latest value for one indicator. Async: each card streams in under its own Suspense. */
-export async function KpiCard({
-  countryCode,
-  indicator,
-  active,
-  pinned,
-  href,
-}: {
-  countryCode: string
+export type KpiCardProps = {
   indicator: Indicator
+  /** `undefined` = the World Bank didn't answer (e.g. timed out); `null` = no data. */
+  latest: LatestValue | undefined
   active: boolean
   pinned?: boolean
   href: string
-}) {
-  // `undefined` = the World Bank didn't answer (e.g. timed out); `null` = no data.
-  const latest = await getLatestValue(countryCode, indicator.code).catch(recoverWith(undefined))
+}
 
+/** Latest value for one indicator, linking to its chart. */
+export function KpiCard({ indicator, latest, active, pinned, href }: KpiCardProps) {
   return (
     <Link href={href} scroll={false} className="rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
       <Card size="sm" className={cn("h-full transition-colors hover:bg-muted/50", active && "ring-2 ring-primary")}>

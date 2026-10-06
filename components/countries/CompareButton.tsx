@@ -4,7 +4,8 @@ import { CheckIcon, PlusIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/Button"
-import { MAX_COMPARE, useCompare } from "@/stores/compare-store"
+import { MAX_COMPARE } from "@/lib/domain/library"
+import { useCompare } from "@/stores/compare-store"
 
 export function CompareButton({
   code,

@@ -1,6 +1,6 @@
-import { json, readJson, withUser } from "@/lib/api/route"
-import { asRecord, countryCode } from "@/lib/api/validate"
-import { addFavorite, listFavorites } from "@/lib/data/favorites"
+import { json, readJson, withUser } from "@/lib/server/http/handler"
+import { asRecord, countryCode } from "@/lib/server/http/validate"
+import { addFavorite, listFavorites } from "@/lib/server/repositories/favorites"
 
 export const GET = withUser(async ({ userId }) => json(await listFavorites(userId)))
 

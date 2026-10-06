@@ -8,8 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select"
-import { useSearchParamUpdater } from "@/lib/use-search-param-updater"
-import { FIRST_YEAR as FIRST, LAST_YEAR as LAST } from "@/lib/years"
+import { useSearchParamUpdater } from "@/lib/client/hooks/use-search-param-updater"
+import { FIRST_YEAR as FIRST, LAST_YEAR as LAST } from "@/lib/domain/year"
 
 import { yearOptions } from "./helpers/year-options"
 

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { PinIcon, PinOffIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/Button"
-import { getIndicator } from "@/lib/indicators"
+import { getIndicator } from "@/lib/domain/indicator"
 import { useUserData } from "@/stores/user-data-store"
 
 export function PinIndicatorButton({ code }: { code: string }) {

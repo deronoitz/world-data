@@ -4,21 +4,21 @@ import Link from "next/link"
 import { StarIcon } from "lucide-react"
 
 import { FavoriteButton } from "@/components/countries/FavoriteButton"
+import { EmptyState } from "@/components/shared/EmptyState"
 import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/Card"
-import { flagEmoji } from "@/lib/format"
+import { flagEmoji } from "@/lib/utils/format"
 import { useUserData } from "@/stores/user-data-store"
 
 import type { CountryLookup } from "./helpers/types"
-import { LibraryEmptyState } from "./LibraryEmptyState"
 
 export function FavoritesTab({ countries }: { countries: CountryLookup }) {
   const favorites = useUserData((s) => s.favorites)
 
   if (favorites.length === 0) {
     return (
-      <LibraryEmptyState icon={StarIcon} title="No favorites yet">
+      <EmptyState icon={StarIcon} title="No favorites yet">
         Star countries in the list or on a country page.
-      </LibraryEmptyState>
+      </EmptyState>
     )
   }
 
