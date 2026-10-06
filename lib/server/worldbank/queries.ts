@@ -96,12 +96,20 @@ export const getIndicatorSeries = cache(
 
 export const getLatestValue = cache(
   async (code: string, indicator: string): Promise<LatestValue> => {
+    // `mrnev=1` usually returns just the newest non-empty value, but for some
+    // country/indicator pairs (e.g. ALB + NY.GDP.PCAP.CD) the API ignores it and
+    // returns the whole series, newest first, over several pages. The first page
+    // then holds the latest years, so take it and pick the newest value ourselves.
     const { rows } = await wbFetch<WbObservationRaw>(
       ENDPOINTS.countryIndicator(code, indicator),
-      { mrnev: 1 }
+      { mrnev: 1 },
+      { paged: true }
     )
-    const obs = rows[0] ? normalizeObservation(rows[0]) : null
-    return obs && obs.value !== null ? { value: obs.value, year: obs.year } : null
+    let latest: LatestValue = null
+    for (const obs of rows.map(normalizeObservation)) {
+      if (obs.value !== null && (!latest || obs.year > latest.year)) latest = { value: obs.value, year: obs.year }
+    }
+    return latest
   }
 )
 

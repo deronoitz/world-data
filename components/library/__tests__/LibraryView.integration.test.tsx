@@ -1,6 +1,8 @@
 import { screen } from "@testing-library/react"
 
+import { fetchRequests, mockFetch } from "@/test-kit/mock-fetch"
 import { renderWithProviders } from "@/test-kit/render"
+import { TEST_SESSION_USER } from "@/test-kit/session"
 import { useUserData } from "@/stores/user-data-store"
 
 import { LibraryView } from "../LibraryView"
@@ -8,11 +10,22 @@ import { COUNTRIES, comparison, note } from "./fixtures"
 
 describe("LibraryView", () => {
   it("shows skeletons until the library has loaded", () => {
-    useUserData.setState({ status: "loading" })
     const { container } = renderWithProviders(<LibraryView countries={COUNTRIES} />)
 
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument()
     expect(container.querySelectorAll("[data-slot=skeleton]")).toHaveLength(6)
+  })
+
+  it("loads every list when opened", async () => {
+    useUserData.setState({ user: TEST_SESSION_USER, authReady: true, loads: {} })
+    mockFetch("GET", "/api/favorites", [{ country_code: "IDN" }])
+    mockFetch("GET", "/api/comparisons", [])
+    mockFetch("GET", "/api/indicators", [])
+    mockFetch("GET", "/api/notes", [])
+    renderWithProviders(<LibraryView countries={COUNTRIES} />)
+
+    expect(await screen.findByRole("tab", { name: "Favorites (1)" })).toBeInTheDocument()
+    expect(fetchRequests()).toHaveLength(4)
   })
 
   it("shows tab counts and switches between tabs", async () => {

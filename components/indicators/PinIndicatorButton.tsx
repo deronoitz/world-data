@@ -5,10 +5,11 @@ import { PinIcon, PinOffIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/Button"
 import { getIndicator } from "@/lib/domain/indicator"
-import { useUserData } from "@/stores/user-data-store"
+import { useLibraryList, useUserData } from "@/stores/user-data-store"
 
 export function PinIndicatorButton({ code }: { code: string }) {
   const router = useRouter()
+  useLibraryList("indicators")
   const pinned = useUserData((s) => s.savedIndicators.includes(code))
   const toggle = useUserData((s) => s.togglePinnedIndicator)
   const label = getIndicator(code)?.shortLabel ?? code

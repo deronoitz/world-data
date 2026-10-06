@@ -5,12 +5,14 @@ import { preload } from "react-dom"
 import { CountryFilters } from "@/components/countries/CountryFilters"
 import { CountryPanel, type PanelParams } from "@/components/countries/CountryPanel"
 import { CountryTabs } from "@/components/countries/CountryTabs"
+import { FavoritesSeed } from "@/components/countries/FavoritesSeed"
 import { MapOverlay } from "@/components/countries/MapOverlay"
 import { WorldMap, type MapCountry } from "@/components/map/WorldMap"
 import { WORLD_GEO_URL } from "@/components/map/helpers/world-geo"
 import { MapSkeleton, PanelSkeleton } from "@/components/shared/Skeletons"
 import { firstParam, regionOptions } from "@/lib/domain/country"
 import { resolveIndicator } from "@/lib/domain/indicator"
+import { getUserFavorites } from "@/lib/server/services/library"
 import { getCountries, getLatestForAll } from "@/lib/server/worldbank/queries"
 
 export const metadata: Metadata = { title: "Countries" }
@@ -60,17 +62,19 @@ export default async function CountriesPage({ searchParams }: PageProps<"/countr
 
 async function MapSection({ indicatorCode, region }: { indicatorCode: string; region?: string }) {
   const indicator = resolveIndicator(indicatorCode)
-  const [countries, data] = await Promise.all([getCountries(), getLatestForAll(indicator.code)])
+  const [countries, data, favorites] = await Promise.all([
+    getCountries(),
+    getLatestForAll(indicator.code),
+    getUserFavorites(),
+  ])
   const mapCountries: Record<string, MapCountry> = Object.fromEntries(
     countries.map((c) => [c.code, { name: c.name, region: c.region.id, iso2: c.iso2, lat: c.lat, lng: c.lng }])
   )
 
   return (
-    <WorldMap
-      countries={mapCountries}
-      data={data}
-      indicator={indicator}
-      region={region}
-    />
+    <>
+      <FavoritesSeed favorites={favorites} />
+      <WorldMap countries={mapCountries} data={data} indicator={indicator} region={region} />
+    </>
   )
 }

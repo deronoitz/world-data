@@ -4,7 +4,7 @@ import { favoriteCountries, savedIndicators } from "@/lib/server/db/schema"
 import { OTHER_USER, TEST_USER, setAuthConfigured, setupAuth } from "@/test-kit/auth"
 import { db } from "@/test-kit/db"
 
-import { getFavoriteCodes, getSavedIndicatorCodes } from "../library"
+import { getFavoriteCodes, getSavedIndicatorCodes, getUserFavorites } from "../library"
 
 const failNextSelect = () => {
   vi.spyOn(console, "error").mockImplementation(() => {})
@@ -38,6 +38,22 @@ describe("getFavoriteCodes", () => {
   it("treats a failed query as no favorites", async () => {
     failNextSelect()
     expect(await getFavoriteCodes()).toEqual(new Set())
+  })
+})
+
+describe("getUserFavorites", () => {
+  it("returns the user's id with their favorite codes", async () => {
+    await db.insert(favoriteCountries).values({ user_id: TEST_USER.id, country_code: "IDN" })
+    expect(await getUserFavorites()).toEqual({ userId: TEST_USER.id, codes: ["IDN"] })
+  })
+
+  it("is null when signed out, or when the query fails so the browser fetches instead", async () => {
+    setupAuth({ user: null })
+    expect(await getUserFavorites()).toBeNull()
+
+    setupAuth()
+    failNextSelect()
+    expect(await getUserFavorites()).toBeNull()
   })
 })
 

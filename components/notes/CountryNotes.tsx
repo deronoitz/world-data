@@ -9,16 +9,16 @@ import { Button } from "@/components/ui/Button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
 import { Separator } from "@/components/ui/Separator"
 import { Skeleton } from "@/components/ui/Skeleton"
-import { useUserData } from "@/stores/user-data-store"
+import { useLibraryList, useUserData } from "@/stores/user-data-store"
 
 import { NoteEditor } from "./NoteEditor"
 import { NoteItem } from "./NoteItem"
 
 export function CountryNotes({ countryCode, countryName }: { countryCode: string; countryName: string }) {
-  const { user, status, addNote, updateNote, deleteNote, requireUser } = useUserData(
+  const loadState = useLibraryList(`notes:${countryCode}`)
+  const { user, addNote, updateNote, deleteNote, requireUser } = useUserData(
     useShallow((s) => ({
       user: s.user,
-      status: s.status,
       addNote: s.addNote,
       updateNote: s.updateNote,
       deleteNote: s.deleteNote,
@@ -51,7 +51,7 @@ export function CountryNotes({ countryCode, countryName }: { countryCode: string
         ) : (
           <>
             <NoteEditor submitLabel="Add note" onSubmit={(body) => addNote(countryCode, body)} />
-            {status === "loading" ? (
+            {loadState === "loading" ? (
               <Skeleton className="h-12 w-full" />
             ) : (
               notes.length > 0 && (

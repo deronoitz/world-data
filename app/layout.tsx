@@ -10,7 +10,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider"
 import { Toaster } from "@/components/ui/Sonner"
 import { TooltipProvider } from "@/components/ui/Tooltip"
 import { isDevLoginEnabled, isGoogleConfigured } from "@/lib/server/auth/env"
-import { getUser } from "@/lib/server/auth/session"
+import { getSessionUser } from "@/lib/server/auth/session"
 
 import "./globals.css"
 
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   // Not awaited: the user streams in under Suspense so the shell renders immediately.
-  const userPromise = getUser()
+  const userPromise = getSessionUser()
 
   return (
     <html

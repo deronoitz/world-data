@@ -125,6 +125,14 @@ describe("World Bank client", () => {
     expect(await getLatestValue("IDN", "SP.POP.TOTL")).toEqual({ value: 280, year: 2023 })
   })
 
+  it("picks the newest value when the API ignores mrnev and returns a paged series", async () => {
+    mockFetch("GET", `${WB}/country/ALB/indicator/NY.GDP.PCAP.CD`, [
+      meta(2, 66),
+      [obs("ALB", null, "2025"), obs("ALB", 12998, "2024"), obs("ALB", 11374, "2023")],
+    ])
+    expect(await getLatestValue("ALB", "NY.GDP.PCAP.CD")).toEqual({ value: 12998, year: 2024 })
+  })
+
   it("returns null when there is no latest observation at all", async () => {
     mockFetch("GET", `${WB}/country/IDN/indicator/SP.POP.TOTL`, [meta(), null])
     expect(await getLatestValue("IDN", "SP.POP.TOTL")).toBeNull()

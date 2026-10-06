@@ -5,7 +5,7 @@ import { StarIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/Button"
 import { cn } from "@/lib/utils"
-import { useIsFavorite, useUserData } from "@/stores/user-data-store"
+import { useIsFavorite, useLibraryList, useUserData } from "@/stores/user-data-store"
 
 export function FavoriteButton({
   code,
@@ -16,6 +16,7 @@ export function FavoriteButton({
   name: string
   withLabel?: boolean
 }) {
+  useLibraryList("favorites")
   const isFavorite = useIsFavorite(code)
   const toggle = useUserData((s) => s.toggleFavorite)
   const router = useRouter()

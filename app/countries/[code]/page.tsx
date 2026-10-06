@@ -6,6 +6,7 @@ import { ArrowLeftIcon, ChartLineIcon } from "lucide-react"
 
 import { CompareButton } from "@/components/countries/CompareButton"
 import { FavoriteButton } from "@/components/countries/FavoriteButton"
+import { FavoritesSeed } from "@/components/countries/FavoritesSeed"
 import { ChartError } from "@/components/indicators/ChartError"
 import { IndicatorHistory } from "@/components/indicators/IndicatorHistory"
 import { IndicatorSelect } from "@/components/indicators/IndicatorSelect"
@@ -21,7 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { firstParam } from "@/lib/domain/country"
 import { flagEmoji } from "@/lib/utils/format"
 import { DEFAULT_INDICATORS, getIndicator, isIndicatorCode, resolveIndicator } from "@/lib/domain/indicator"
-import { getSavedIndicatorCodes } from "@/lib/server/services/library"
+import { getSavedIndicatorCodes, getUserFavorites } from "@/lib/server/services/library"
 import { recoverWith } from "@/lib/server/worldbank/http"
 import { getCountry, getIndicatorSeries } from "@/lib/server/worldbank/queries"
 import type { Country } from "@/lib/domain/country"
@@ -34,7 +35,8 @@ export async function generateMetadata({ params }: PageProps<"/countries/[code]"
 
 export default async function CountryPage({ params, searchParams }: PageProps<"/countries/[code]">) {
   const { code } = await params
-  const country = await getCountry(code)
+  // Favorites are read alongside the country, so FavoriteButton needn't fetch them.
+  const [country, favorites] = await Promise.all([getCountry(code), getUserFavorites()])
   if (!country) notFound()
 
   const sp = await searchParams
@@ -50,6 +52,7 @@ export default async function CountryPage({ params, searchParams }: PageProps<"/
 
   return (
     <>
+      <FavoritesSeed favorites={favorites} />
       <Button variant="ghost" size="sm" className="self-start" nativeButton={false} render={<Link href="/countries" />}>
         <ArrowLeftIcon data-icon="inline-start" />
         All countries

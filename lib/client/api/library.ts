@@ -41,7 +41,9 @@ export const comparisonsApi = {
 }
 
 export const notesApi = {
-  list: () => api<NoteRow[]>("/api/notes"),
+  /** Every note, or only one country's. */
+  list: (countryCode?: string) =>
+    api<NoteRow[]>(countryCode ? `/api/notes?country=${countryCode}` : "/api/notes"),
   create: (countryCode: string, body: string) =>
     api<NoteRow>("/api/notes", { method: "POST", body: { country_code: countryCode, body } }),
   update: (id: string, body: string) => api<NoteRow>(`/api/notes/${id}`, { method: "PATCH", body: { body } }),

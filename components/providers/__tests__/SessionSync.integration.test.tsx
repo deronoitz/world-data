@@ -1,20 +1,13 @@
 import { Suspense } from "react"
 import { act, render, waitFor } from "@testing-library/react"
 
-import { fetchRequests, mockFetch } from "@/test-kit/mock-fetch"
+import { fetchRequests } from "@/test-kit/mock-fetch"
 import { TEST_SESSION_USER } from "@/test-kit/session"
 import { useCompare } from "@/stores/compare-store"
 import type { SessionUser } from "@/lib/domain/user"
 import { useUserData } from "@/stores/user-data-store"
 
 import { SessionSync } from "../SessionSync"
-
-function mockLibrary() {
-  mockFetch("GET", "/api/favorites", [{ country_code: "IDN" }])
-  mockFetch("GET", "/api/indicators", [])
-  mockFetch("GET", "/api/comparisons", [])
-  mockFetch("GET", "/api/notes", [])
-}
 
 async function renderSync(user: SessionUser | null) {
   await act(async () => {
@@ -27,17 +20,15 @@ async function renderSync(user: SessionUser | null) {
 }
 
 describe("SessionSync", () => {
-  it("seeds the store with the server user and hydrates their library", async () => {
-    mockLibrary()
+  it("seeds the store with the server user without fetching their library", async () => {
     await renderSync(TEST_SESSION_USER)
-    await waitFor(() => expect(useUserData.getState().status).toBe("ready"))
-    expect(useUserData.getState()).toMatchObject({ user: TEST_SESSION_USER, authReady: true, favorites: ["IDN"] })
-    expect(fetchRequests("GET", "/api/favorites")).toHaveLength(1)
+    expect(useUserData.getState()).toMatchObject({ user: TEST_SESSION_USER, authReady: true, loads: {} })
+    expect(fetchRequests()).toHaveLength(0)
   })
 
   it("marks auth as ready for a signed-out visitor without fetching", async () => {
     await renderSync(null)
-    expect(useUserData.getState()).toMatchObject({ user: null, authReady: true, status: "signed-out" })
+    expect(useUserData.getState()).toMatchObject({ user: null, authReady: true, loads: {} })
     expect(fetchRequests()).toHaveLength(0)
   })
 

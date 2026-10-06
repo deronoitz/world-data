@@ -1,6 +1,8 @@
 import "server-only"
 
-import { getUser } from "@/lib/server/auth/session"
+import { cache } from "react"
+
+import { getSessionUser } from "@/lib/server/auth/session"
 import { listFavoriteCodes } from "@/lib/server/repositories/favorites"
 import { listSavedIndicatorCodes } from "@/lib/server/repositories/saved-indicators"
 
@@ -15,16 +17,24 @@ async function orEmpty<T>(query: () => Promise<T>, empty: T): Promise<T> {
   }
 }
 
+/**
+ * The signed-in user's favorite codes, read once per request. Null when signed
+ * out, or when the query failed (the browser then fetches them itself).
+ */
+export const getUserFavorites = cache(async (): Promise<{ userId: string; codes: string[] } | null> => {
+  const user = await getSessionUser()
+  if (!user) return null
+  return orEmpty(async () => ({ userId: user.id, codes: await listFavoriteCodes(user.id) }), null)
+})
+
 /** Favorite country codes for the signed-in user (empty when signed out). */
 export async function getFavoriteCodes(): Promise<Set<string>> {
-  const user = await getUser()
-  if (!user) return new Set()
-  return orEmpty(async () => new Set(await listFavoriteCodes(user.id)), new Set<string>())
+  return new Set((await getUserFavorites())?.codes)
 }
 
 /** Pinned indicator codes in the user's chosen order (empty when signed out). */
 export async function getSavedIndicatorCodes(): Promise<string[]> {
-  const user = await getUser()
+  const user = await getSessionUser()
   if (!user) return []
   return orEmpty(() => listSavedIndicatorCodes(user.id), [])
 }

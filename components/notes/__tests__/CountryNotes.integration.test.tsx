@@ -2,6 +2,7 @@ import { act, screen, waitFor, within } from "@testing-library/react"
 
 import { fetchRequests, mockFetch, reply } from "@/test-kit/mock-fetch"
 import { renderWithProviders } from "@/test-kit/render"
+import { TEST_SESSION_USER } from "@/test-kit/session"
 import { useUserData } from "@/stores/user-data-store"
 
 import { CountryNotes } from "../CountryNotes"
@@ -24,6 +25,15 @@ describe("CountryNotes", () => {
     const { user } = renderNotes(false)
     await user.click(screen.getByRole("button", { name: "Sign in" }))
     expect(useUserData.getState().signInPrompt).toBe("Sign in to write notes.")
+  })
+
+  it("fetches only this country's notes when opened", async () => {
+    useUserData.setState({ user: TEST_SESSION_USER, authReady: true, loads: {} })
+    mockFetch("GET", "/api/notes?country=IDN", [NOTE])
+    renderWithProviders(<CountryNotes countryCode="IDN" countryName="Indonesia" />)
+
+    expect(await screen.findByText("Visit Bali")).toBeInTheDocument()
+    expect(fetchRequests()).toHaveLength(1)
   })
 
   it("only lists notes for this country", () => {
@@ -91,10 +101,10 @@ describe("CountryNotes", () => {
     expect(fetchRequests("DELETE")).toHaveLength(1)
   })
 
-  it("shows a skeleton instead of notes while the library loads", () => {
+  it("shows a skeleton instead of notes while they load", () => {
     useUserData.setState({ notes: [NOTE] })
     renderNotes()
-    act(() => useUserData.setState({ status: "loading" }))
+    act(() => useUserData.setState({ loads: { "notes:IDN": "loading" } }))
     expect(screen.queryByText("Visit Bali")).not.toBeInTheDocument()
     expect(document.querySelector('[data-slot="skeleton"]')).toBeInTheDocument()
   })

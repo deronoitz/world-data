@@ -4,7 +4,7 @@ import { useShallow } from "zustand/react/shallow"
 
 import { Skeleton } from "@/components/ui/Skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs"
-import { useUserData } from "@/stores/user-data-store"
+import { useLibraryList, useUserData } from "@/stores/user-data-store"
 
 import { ComparisonsTab } from "./ComparisonsTab"
 import { FavoritesTab } from "./FavoritesTab"
@@ -13,7 +13,13 @@ import { IndicatorsTab } from "./IndicatorsTab"
 import { NotesTab } from "./NotesTab"
 
 export function LibraryView({ countries }: { countries: CountryLookup }) {
-  const status = useUserData((s) => s.status)
+  // The library is the one page that shows every list.
+  const loads = [
+    useLibraryList("favorites"),
+    useLibraryList("comparisons"),
+    useLibraryList("indicators"),
+    useLibraryList("notes"),
+  ]
   const counts = useUserData(
     useShallow((s) => ({
       favorites: s.favorites.length,
@@ -23,7 +29,7 @@ export function LibraryView({ countries }: { countries: CountryLookup }) {
     }))
   )
 
-  if (status !== "ready") {
+  if (!loads.every((state) => state === "ready")) {
     return (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }, (_, i) => (

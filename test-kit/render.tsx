@@ -9,7 +9,7 @@ import { useUserData } from "@/stores/user-data-store"
 /**
  * Render a client component with a userEvent instance. `url` sets what
  * usePathname()/useSearchParams() return; `signedIn` puts a user in the store
- * (without triggering a library hydrate).
+ * with every library list marked loaded, so components don't fetch them.
  */
 export function renderWithProviders(
   ui: React.ReactElement,
@@ -17,10 +17,12 @@ export function renderWithProviders(
 ) {
   if (url) setUrl(url)
   if (signedIn) {
+    const user = signedIn === true ? TEST_SESSION_USER : signedIn
     useUserData.setState({
-      user: signedIn === true ? TEST_SESSION_USER : signedIn,
+      user,
+      owner: user.id,
       authReady: true,
-      status: "ready",
+      loads: { favorites: "ready", indicators: "ready", comparisons: "ready", notes: "ready" },
     })
   }
   return { user: userEvent.setup(), ...render(ui) }

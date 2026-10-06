@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton"
 import { formatValue } from "@/lib/utils/format"
 import type { Indicator } from "@/lib/domain/indicator"
 import type { LatestByCountry } from "@/lib/domain/indicator"
-import { useUserData } from "@/stores/user-data-store"
+import { useLibraryList, useUserData } from "@/stores/user-data-store"
 
 import { CountryShape } from "./CountryShape"
 import { buildColorScale } from "./helpers/color-scale"
@@ -39,6 +39,7 @@ export function WorldMap({
   region?: string
 }) {
   const router = useRouter()
+  useLibraryList("favorites")
   const favorites = useUserData((s) => s.favorites)
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)

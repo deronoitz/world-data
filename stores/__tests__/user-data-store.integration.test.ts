@@ -4,38 +4,175 @@ import { toast } from "sonner"
 import { fetchRequests, mockFetch, reply } from "@/test-kit/mock-fetch"
 import { TEST_SESSION_USER } from "@/test-kit/session"
 
-import { useIsFavorite, useUserData } from "../user-data-store"
+import { useIsFavorite, useLibraryList, useUserData } from "../user-data-store"
 
 const state = () => useUserData.getState()
-const signIn = () => useUserData.setState({ user: TEST_SESSION_USER, authReady: true, status: "ready" })
+const READY = { favorites: "ready", indicators: "ready", comparisons: "ready", notes: "ready" } as const
+/** Signed in with every list already loaded, so actions don't trigger fetches. */
+const signIn = () =>
+  useUserData.setState({ user: TEST_SESSION_USER, owner: TEST_SESSION_USER.id, authReady: true, loads: READY })
+/** Signed in with nothing loaded yet. */
+const signInFresh = () =>
+  useUserData.setState({ user: TEST_SESSION_USER, owner: TEST_SESSION_USER.id, authReady: true, loads: {} })
 
-function mockLibrary() {
-  mockFetch("GET", "/api/favorites", [{ country_code: "IDN" }])
-  mockFetch("GET", "/api/indicators", [{ indicator_code: "SP.POP.TOTL" }])
-  mockFetch("GET", "/api/comparisons", [])
-  mockFetch("GET", "/api/notes", [])
-}
+const note = (id: string, country_code: string) => ({
+  id,
+  country_code,
+  body: id,
+  user_id: "u",
+  created_at: "a",
+  updated_at: "a",
+})
 
 describe("user data store", () => {
-  it("hydrates the library when a user signs in", async () => {
-    mockLibrary()
+  it("fetches nothing when a user signs in", () => {
     state().setUser(TEST_SESSION_USER)
-    await vi.waitFor(() => expect(state().status).toBe("ready"))
-    expect(state()).toMatchObject({ favorites: ["IDN"], savedIndicators: ["SP.POP.TOTL"] })
+    expect(state()).toMatchObject({ user: TEST_SESSION_USER, authReady: true, loads: {} })
+    expect(fetchRequests()).toHaveLength(0)
   })
 
-  it("marks the library as errored and toasts when hydrating fails", async () => {
-    mockLibrary()
-    mockFetch("GET", "/api/notes", reply(500, { error: "boom" }))
-    await state().hydrate()
-    expect(state().status).toBe("error")
+  it("loads a list once, even when asked for it concurrently", async () => {
+    signInFresh()
+    mockFetch("GET", "/api/indicators", [{ indicator_code: "SP.POP.TOTL" }])
+    await Promise.all([state().load("indicators"), state().load("indicators")])
+    await state().load("indicators")
+
+    expect(state()).toMatchObject({ savedIndicators: ["SP.POP.TOTL"], loads: { indicators: "ready" } })
+    expect(fetchRequests("GET", "/api/indicators")).toHaveLength(1)
+  })
+
+  it("maps favorites and comparisons", async () => {
+    signInFresh()
+    mockFetch("GET", "/api/favorites", [{ country_code: "IDN" }])
+    mockFetch("GET", "/api/comparisons", [{ id: "c1" }])
+    await state().load("favorites")
+    await state().load("comparisons")
+    expect(state()).toMatchObject({ favorites: ["IDN"], comparisons: [{ id: "c1" }] })
+  })
+
+  it("loads one country's notes, keeping other countries' notes", async () => {
+    signInFresh()
+    useUserData.setState({ notes: [note("old-idn", "IDN"), note("fra", "FRA")] })
+    mockFetch("GET", "/api/notes?country=IDN", [note("idn", "IDN")])
+    await state().load("notes:IDN")
+
+    expect(state().notes.map((n) => n.id)).toEqual(["idn", "fra"])
+    expect(fetchRequests("GET", "/api/notes?country=IDN")).toHaveLength(1)
+  })
+
+  it("skips a country's notes once every note is loaded", async () => {
+    signInFresh()
+    mockFetch("GET", "/api/notes", [note("idn", "IDN"), note("fra", "FRA")])
+    await state().load("notes")
+    await state().load("notes:FRA")
+
+    expect(state().notes).toHaveLength(2)
+    expect(fetchRequests()).toHaveLength(1)
+  })
+
+  it("does nothing when signed out", async () => {
+    await state().load("favorites")
+    expect(fetchRequests()).toHaveLength(0)
+  })
+
+  it("marks a failed list, toasts, and retries on the next load", async () => {
+    signInFresh()
+    mockFetch("GET", "/api/favorites", reply(500, { error: "boom" }))
+    await state().load("favorites")
+    expect(state().loads.favorites).toBe("error")
     expect(toast.error).toHaveBeenCalledWith("Could not load your library", { description: "boom" })
+
+    mockFetch("GET", "/api/favorites", [{ country_code: "IDN" }])
+    await state().load("favorites")
+    expect(state()).toMatchObject({ favorites: ["IDN"], loads: { favorites: "ready" } })
+  })
+
+  it("drops a response that arrives after signing out", async () => {
+    signInFresh()
+    let respond!: (value: unknown) => void
+    mockFetch("GET", "/api/favorites", () => new Promise((resolve) => (respond = resolve)))
+    const favorites = state().load("favorites")
+    await vi.waitFor(() => expect(fetchRequests("GET", "/api/favorites")).toHaveLength(1))
+    state().setUser(null)
+    respond(Response.json([{ country_code: "IDN" }]))
+    await favorites
+
+    expect(state()).toMatchObject({ favorites: [], loads: {} })
+  })
+
+  it("drops a failure that arrives after signing out", async () => {
+    signInFresh()
+    let respond!: (value: unknown) => void
+    mockFetch("GET", "/api/favorites", () => new Promise((resolve) => (respond = resolve)))
+    const favorites = state().load("favorites")
+    await vi.waitFor(() => expect(fetchRequests("GET", "/api/favorites")).toHaveLength(1))
+    state().setUser(null)
+    respond(reply(500, { error: "boom" }))
+    await favorites
+
+    expect(state().loads).toEqual({})
+    expect(toast.error).not.toHaveBeenCalled()
   })
 
   it("clears the library on sign-out", () => {
-    useUserData.setState({ user: TEST_SESSION_USER, favorites: ["IDN"] })
+    signIn()
+    useUserData.setState({ favorites: ["IDN"] })
     state().setUser(null)
-    expect(state()).toMatchObject({ status: "signed-out", favorites: [] })
+    expect(state()).toMatchObject({ favorites: [], loads: {}, owner: null })
+  })
+
+  describe("seedFavorites", () => {
+    it("fills favorites so they aren't fetched, and keeps them when the session arrives", async () => {
+      state().seedFavorites(TEST_SESSION_USER.id, ["IDN"])
+      state().setUser(TEST_SESSION_USER)
+      await state().load("favorites")
+
+      expect(state()).toMatchObject({ favorites: ["IDN"], loads: { favorites: "ready" } })
+      expect(fetchRequests()).toHaveLength(0)
+    })
+
+    it("doesn't overwrite favorites the store already loaded", () => {
+      signIn()
+      useUserData.setState({ favorites: ["IDN", "FRA"] })
+      state().seedFavorites(TEST_SESSION_USER.id, ["IDN"])
+      expect(state().favorites).toEqual(["IDN", "FRA"])
+    })
+
+    it("ignores a seed for another account", () => {
+      signIn()
+      useUserData.setState({ favorites: ["IDN"] })
+      state().seedFavorites("someone-else", ["FRA"])
+      expect(state().favorites).toEqual(["IDN"])
+    })
+
+    it("drops lists of a previous account before seeding", () => {
+      useUserData.setState({ owner: "someone-else", favorites: ["FRA"], comparisons: [{ id: "c1" } as never] })
+      state().seedFavorites(TEST_SESSION_USER.id, ["IDN"])
+      expect(state()).toMatchObject({ owner: TEST_SESSION_USER.id, favorites: ["IDN"], comparisons: [] })
+    })
+  })
+
+  describe("useLibraryList", () => {
+    it("loads nothing and reports nothing while signed out", () => {
+      const { result } = renderHook(() => useLibraryList("favorites"))
+      expect(result.current).toBeUndefined()
+      expect(fetchRequests()).toHaveLength(0)
+    })
+
+    it("loads the list for a signed-in user and reports its state", async () => {
+      signInFresh()
+      mockFetch("GET", "/api/favorites", [{ country_code: "IDN" }])
+      const { result } = renderHook(() => useLibraryList("favorites"))
+      await vi.waitFor(() => expect(result.current).toBe("ready"))
+      expect(state().favorites).toEqual(["IDN"])
+    })
+
+    it("reports a country's notes as ready once every note is loaded", () => {
+      signIn()
+      const { result } = renderHook(() => useLibraryList("notes:IDN"))
+      expect(result.current).toBe("ready")
+      expect(fetchRequests()).toHaveLength(0)
+    })
   })
 
   it("asks signed-out users to sign in instead of calling the API", async () => {
@@ -86,10 +223,10 @@ const COMPARISON = {
 const NOTE = { id: "n1", country_code: "IDN", body: "old", user_id: "u", created_at: "a", updated_at: "a" }
 
 describe("user data store: session", () => {
-  it("does not re-hydrate when the same user is set again", () => {
+  it("keeps loaded lists when the same user's details change", () => {
     signIn()
     state().setUser({ ...TEST_SESSION_USER, name: "Renamed" })
-    expect(state().user?.name).toBe("Renamed")
+    expect(state()).toMatchObject({ user: { name: "Renamed" }, loads: READY })
     expect(fetchRequests()).toHaveLength(0)
   })
 

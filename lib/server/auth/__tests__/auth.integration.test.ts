@@ -7,7 +7,7 @@ import { TEST_USER, setAuthConfigured, setProviders, setupAuth, signIn } from "@
 import { db } from "@/test-kit/db"
 
 import { signInAsDevUser, signInWithGoogle } from "../actions"
-import { getUser } from "../session"
+import { getSessionUser, getUser } from "../session"
 
 describe("signInWithGoogle", () => {
   it("starts Google sign in with a safe redirect target", async () => {
@@ -46,6 +46,23 @@ describe("signInAsDevUser", () => {
     setAuthConfigured(false)
     expect(await signInAsDevUser("/library")).toEqual({ error: expect.stringContaining("AUTH_DEV_LOGIN") })
     expect(signIn).not.toHaveBeenCalled()
+  })
+})
+
+describe("getSessionUser", () => {
+  it("reads the user from the session without querying the database", async () => {
+    const select = vi.spyOn(db, "select")
+    await db.delete(users).where(eq(users.id, TEST_USER.id))
+    expect(await getSessionUser()).toMatchObject({ id: TEST_USER.id })
+    expect(select).not.toHaveBeenCalled()
+  })
+
+  it("is null when signed out or not configured", async () => {
+    setupAuth({ user: null })
+    expect(await getSessionUser()).toBeNull()
+    setupAuth()
+    setAuthConfigured(false)
+    expect(await getSessionUser()).toBeNull()
   })
 })
 
