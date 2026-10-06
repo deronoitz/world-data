@@ -60,6 +60,15 @@ function fail(message: string, error: unknown) {
   toast.error(message, { description: error instanceof Error ? error.message : undefined })
 }
 
+/**
+ * Puts `item` back at `index` unless it's already there. Rollbacks undo only the
+ * one change that failed, so concurrent changes to the same list survive.
+ */
+function restoreAt<T>(list: T[], item: T, index: number, same: (a: T) => boolean): T[] {
+  if (list.some(same)) return list
+  return [...list.slice(0, index), item, ...list.slice(index)]
+}
+
 type ListPatch = Partial<UserDataState> | ((state: UserDataState) => Partial<UserDataState>)
 
 async function fetchList(key: ListKey): Promise<ListPatch> {
@@ -136,39 +145,51 @@ export const useUserData = create<UserDataState>()((set, get) => ({
 
   toggleFavorite: async (code) => {
     if (!get().requireUser("Sign in to save favorite countries.")) return
-    const wasFavorite = get().favorites.includes(code)
-    const before = get().favorites
-    set({ favorites: wasFavorite ? before.filter((c) => c !== code) : [code, ...before] })
+    const index = get().favorites.indexOf(code)
+    const wasFavorite = index !== -1
+    set((s) => ({ favorites: wasFavorite ? s.favorites.filter((c) => c !== code) : [code, ...s.favorites] }))
     try {
       if (wasFavorite) await favoritesApi.remove(code)
       else await favoritesApi.add(code)
     } catch (error) {
-      set({ favorites: before })
+      set((s) => ({
+        favorites: wasFavorite
+          ? restoreAt(s.favorites, code, index, (c) => c === code)
+          : s.favorites.filter((c) => c !== code),
+      }))
       fail("Could not update favorites", error)
     }
   },
 
   togglePinnedIndicator: async (code) => {
     if (!get().requireUser("Sign in to pin indicators.")) return
-    const before = get().savedIndicators
-    const pinned = before.includes(code)
-    set({ savedIndicators: pinned ? before.filter((c) => c !== code) : [...before, code] })
+    const index = get().savedIndicators.indexOf(code)
+    const pinned = index !== -1
+    set((s) => ({
+      savedIndicators: pinned ? s.savedIndicators.filter((c) => c !== code) : [...s.savedIndicators, code],
+    }))
     try {
       if (pinned) await indicatorsApi.unpin(code)
       else await indicatorsApi.pin(code)
     } catch (error) {
-      set({ savedIndicators: before })
+      set((s) => ({
+        savedIndicators: pinned
+          ? restoreAt(s.savedIndicators, code, index, (c) => c === code)
+          : s.savedIndicators.filter((c) => c !== code),
+      }))
       fail("Could not update pinned indicators", error)
     }
   },
 
   reorderIndicators: async (order) => {
+    if (!get().requireUser("Sign in to reorder indicators.")) return
     const before = get().savedIndicators
     set({ savedIndicators: order })
     try {
       await indicatorsApi.reorder(order)
     } catch (error) {
-      set({ savedIndicators: before })
+      // A reorder replaces the whole list, so undo it only if nothing changed since.
+      if (get().savedIndicators === order) set({ savedIndicators: before })
       fail("Could not reorder indicators", error)
     }
   },
@@ -187,23 +208,29 @@ export const useUserData = create<UserDataState>()((set, get) => ({
   },
 
   renameComparison: async (id, name) => {
-    const before = get().comparisons
-    set({ comparisons: before.map((c) => (c.id === id ? { ...c, name } : c)) })
+    if (!get().requireUser("Sign in to rename comparisons.")) return
+    const oldName = get().comparisons.find((c) => c.id === id)?.name
+    if (oldName === undefined) return
+    set((s) => ({ comparisons: s.comparisons.map((c) => (c.id === id ? { ...c, name } : c)) }))
     try {
-      await comparisonsApi.rename(id, name)
+      const row = await comparisonsApi.rename(id, name)
+      set((s) => ({ comparisons: s.comparisons.map((c) => (c.id === id ? row : c)) }))
     } catch (error) {
-      set({ comparisons: before })
+      set((s) => ({ comparisons: s.comparisons.map((c) => (c.id === id ? { ...c, name: oldName } : c)) }))
       fail("Could not rename comparison", error)
     }
   },
 
   deleteComparison: async (id) => {
-    const before = get().comparisons
-    set({ comparisons: before.filter((c) => c.id !== id) })
+    if (!get().requireUser("Sign in to delete comparisons.")) return
+    const index = get().comparisons.findIndex((c) => c.id === id)
+    if (index === -1) return
+    const row = get().comparisons[index]
+    set((s) => ({ comparisons: s.comparisons.filter((c) => c.id !== id) }))
     try {
       await comparisonsApi.remove(id)
     } catch (error) {
-      set({ comparisons: before })
+      set((s) => ({ comparisons: restoreAt(s.comparisons, row, index, (c) => c.id === id) }))
       fail("Could not delete comparison", error)
     }
   },
@@ -221,26 +248,31 @@ export const useUserData = create<UserDataState>()((set, get) => ({
   },
 
   updateNote: async (id, body) => {
-    const before = get().notes
-    set({ notes: before.map((n) => (n.id === id ? { ...n, body } : n)) })
+    if (!get().requireUser("Sign in to edit notes.")) return false
+    const oldBody = get().notes.find((n) => n.id === id)?.body
+    if (oldBody === undefined) return false
+    set((s) => ({ notes: s.notes.map((n) => (n.id === id ? { ...n, body } : n)) }))
     try {
       const row = await notesApi.update(id, body)
-      set({ notes: get().notes.map((n) => (n.id === id ? row : n)) })
+      set((s) => ({ notes: s.notes.map((n) => (n.id === id ? row : n)) }))
       return true
     } catch (error) {
-      set({ notes: before })
+      set((s) => ({ notes: s.notes.map((n) => (n.id === id ? { ...n, body: oldBody } : n)) }))
       fail("Could not update note", error)
       return false
     }
   },
 
   deleteNote: async (id) => {
-    const before = get().notes
-    set({ notes: before.filter((n) => n.id !== id) })
+    if (!get().requireUser("Sign in to delete notes.")) return
+    const index = get().notes.findIndex((n) => n.id === id)
+    if (index === -1) return
+    const row = get().notes[index]
+    set((s) => ({ notes: s.notes.filter((n) => n.id !== id) }))
     try {
       await notesApi.remove(id)
     } catch (error) {
-      set({ notes: before })
+      set((s) => ({ notes: restoreAt(s.notes, row, index, (n) => n.id === id) }))
       fail("Could not delete note", error)
     }
   },

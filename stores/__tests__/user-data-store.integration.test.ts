@@ -296,6 +296,7 @@ describe("user data store: pinned indicators", () => {
   })
 
   it("reorders optimistically and sends the new order", async () => {
+    signIn()
     useUserData.setState({ savedIndicators: ["A", "B"] })
     mockFetch("PUT", "/api/indicators", reply(204))
     const pending = state().reorderIndicators(["B", "A"])
@@ -305,6 +306,7 @@ describe("user data store: pinned indicators", () => {
   })
 
   it("rolls back a failed reorder", async () => {
+    signIn()
     useUserData.setState({ savedIndicators: ["A", "B"] })
     mockFetch("PUT", "/api/indicators", reply(500))
     await state().reorderIndicators(["B", "A"])
@@ -341,6 +343,7 @@ describe("user data store: comparisons", () => {
   })
 
   it("renames a comparison", async () => {
+    signIn()
     useUserData.setState({ comparisons: [COMPARISON, { ...COMPARISON, id: "c2", name: "Other" }] })
     mockFetch("PATCH", "/api/comparisons/c1", reply(200, { ...COMPARISON, name: "SEA" }))
     await state().renameComparison("c1", "SEA")
@@ -349,6 +352,7 @@ describe("user data store: comparisons", () => {
   })
 
   it("rolls back a failed rename", async () => {
+    signIn()
     useUserData.setState({ comparisons: [COMPARISON] })
     mockFetch("PATCH", "/api/comparisons/c1", reply(500, { error: "x" }))
     await state().renameComparison("c1", "SEA")
@@ -357,6 +361,7 @@ describe("user data store: comparisons", () => {
   })
 
   it("deletes a comparison", async () => {
+    signIn()
     useUserData.setState({ comparisons: [COMPARISON] })
     mockFetch("DELETE", "/api/comparisons/c1", reply(204))
     await state().deleteComparison("c1")
@@ -365,6 +370,7 @@ describe("user data store: comparisons", () => {
   })
 
   it("rolls back a failed delete", async () => {
+    signIn()
     useUserData.setState({ comparisons: [COMPARISON] })
     mockFetch("DELETE", "/api/comparisons/c1", reply(500, { error: "x" }))
     await state().deleteComparison("c1")
@@ -389,6 +395,7 @@ describe("user data store: notes", () => {
   })
 
   it("rolls back a failed note edit", async () => {
+    signIn()
     useUserData.setState({ notes: [NOTE, { ...NOTE, id: "n2" }] })
     mockFetch("PATCH", "/api/notes/n1", reply(500, { error: "x" }))
     expect(await state().updateNote("n1", "new")).toBe(false)
@@ -397,6 +404,7 @@ describe("user data store: notes", () => {
   })
 
   it("rolls back a failed note delete", async () => {
+    signIn()
     useUserData.setState({ notes: [NOTE] })
     mockFetch("DELETE", "/api/notes/n1", reply(500, { error: "x" }))
     await state().deleteNote("n1")
@@ -407,6 +415,7 @@ describe("user data store: notes", () => {
 
 describe("user data store: errors", () => {
   it("only replaces the edited note with the server row", async () => {
+    signIn()
     useUserData.setState({ notes: [NOTE, { ...NOTE, id: "n2" }] })
     mockFetch("PATCH", "/api/notes/n1", { ...NOTE, body: "new", updated_at: "b" })
     expect(await state().updateNote("n1", "new")).toBe(true)
@@ -414,11 +423,68 @@ describe("user data store: errors", () => {
   })
 
   it("toasts without a description when the failure is not an Error", async () => {
+    signIn()
     useUserData.setState({ notes: [NOTE] })
     mockFetch("DELETE", "/api/notes/n1", () => {
       throw "offline"
     })
     await state().deleteNote("n1")
     expect(toast.error).toHaveBeenCalledWith("Could not delete note", { description: undefined })
+  })
+})
+
+describe("user data store: concurrent changes", () => {
+  it("keeps a favorite that saved when another one fails", async () => {
+    signIn()
+    mockFetch("POST", "/api/favorites", async (request: Request) => {
+      const { country_code } = await request.json()
+      return country_code === "IDN" ? reply(500, { error: "x" }) : reply(201, { country_code })
+    })
+    await Promise.all([state().toggleFavorite("IDN"), state().toggleFavorite("FRA")])
+    expect(state().favorites).toEqual(["FRA"])
+  })
+
+  it("restores a failed unpin at its old position, keeping a pin made meanwhile", async () => {
+    signIn()
+    useUserData.setState({ savedIndicators: ["A", "B", "C"] })
+    mockFetch("DELETE", "/api/indicators/B", reply(500, { error: "x" }))
+    mockFetch("POST", "/api/indicators", reply(201, { indicator_code: "D" }))
+    await Promise.all([state().togglePinnedIndicator("B"), state().togglePinnedIndicator("D")])
+    expect(state().savedIndicators).toEqual(["A", "B", "C", "D"])
+  })
+
+  it("keeps a reorder made after one that failed", async () => {
+    signIn()
+    useUserData.setState({ savedIndicators: ["A", "B"] })
+    mockFetch("PUT", "/api/indicators", reply(500))
+    const failed = state().reorderIndicators(["B", "A"])
+    useUserData.setState({ savedIndicators: ["A", "B", "C"] })
+    await failed
+    expect(state().savedIndicators).toEqual(["A", "B", "C"])
+  })
+
+  it("undoes only the failed rename", async () => {
+    signIn()
+    useUserData.setState({ comparisons: [COMPARISON, { ...COMPARISON, id: "c2", name: "Other" }] })
+    mockFetch("PATCH", "/api/comparisons/c1", reply(500, { error: "x" }))
+    mockFetch("PATCH", "/api/comparisons/c2", reply(200, { ...COMPARISON, id: "c2", name: "Euro", updated_at: "b" }))
+    await Promise.all([state().renameComparison("c1", "SEA"), state().renameComparison("c2", "Euro")])
+    expect(state().comparisons.map((c) => c.name)).toEqual(["Asia", "Euro"])
+    expect(state().comparisons[1].updated_at).toBe("b")
+  })
+
+  it("restores a failed delete without undoing a delete that succeeded", async () => {
+    signIn()
+    useUserData.setState({ notes: [NOTE, { ...NOTE, id: "n2" }, { ...NOTE, id: "n3" }] })
+    mockFetch("DELETE", "/api/notes/n2", reply(500, { error: "x" }))
+    mockFetch("DELETE", "/api/notes/n3", reply(204))
+    await Promise.all([state().deleteNote("n2"), state().deleteNote("n3")])
+    expect(state().notes.map((n) => n.id)).toEqual(["n1", "n2"])
+  })
+
+  it("asks signed-out users to sign in before reordering", async () => {
+    await state().reorderIndicators(["B", "A"])
+    expect(state().signInPrompt).toBe("Sign in to reorder indicators.")
+    expect(fetchRequests()).toHaveLength(0)
   })
 })
