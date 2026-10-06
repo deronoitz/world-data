@@ -1,14 +1,13 @@
-import type { User } from "@supabase/supabase-js"
+import type { User } from "next-auth"
 
 import type { SessionUser } from "@/stores/user-data-store"
 
-export function toSessionUser(user: User | null): SessionUser | null {
-  if (!user) return null
-  const meta = user.user_metadata ?? {}
+export function toSessionUser(user: User | null | undefined): SessionUser | null {
+  if (!user?.id) return null
   return {
     id: user.id,
     email: user.email ?? null,
-    name: (meta.full_name as string | undefined) ?? (meta.name as string | undefined) ?? null,
-    avatarUrl: (meta.avatar_url as string | undefined) ?? (meta.picture as string | undefined) ?? null,
+    name: user.name ?? null,
+    avatarUrl: user.image ?? null,
   }
 }

@@ -6,9 +6,6 @@ import { renderServer } from "@/test-kit/server"
 
 import ComparePage from "../page"
 
-vi.mock("@/lib/supabase/server", () => import("@/test-kit/supabase"))
-vi.mock("@/lib/supabase/env", () => import("@/test-kit/supabase"))
-
 const IDN = wbCountry("IDN", "Indonesia")
 const BRA = wbCountry("BRA", "Brazil")
 const USA = wbCountry("USA", "United States")
@@ -41,8 +38,9 @@ describe("compare page", () => {
     expect(screen.getByRole("button", { name: "Remove Indonesia" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Remove Brazil" })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Remove United States" })).not.toBeInTheDocument()
+    // The full history is requested (one cacheable URL); the range is applied locally.
     expect(new URL(fetchRequests("GET", `${WB}/country/IDN;BRA/indicator/SP.POP.TOTL`)[0].url).searchParams.get("date")).toBe(
-      "2000:2010"
+      `1960:${new Date().getFullYear()}`
     )
 
     const latest = screen.getByRole("table")

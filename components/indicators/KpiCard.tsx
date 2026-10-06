@@ -5,7 +5,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { formatValue } from "@/lib/format"
 import type { Indicator } from "@/lib/indicators"
 import { cn } from "@/lib/utils"
-import { getLatestValue } from "@/lib/worldbank/client"
+import { getLatestValue, recoverWith } from "@/lib/worldbank/client"
 
 /** Latest value for one indicator. Async: each card streams in under its own Suspense. */
 export async function KpiCard({
@@ -21,7 +21,8 @@ export async function KpiCard({
   pinned?: boolean
   href: string
 }) {
-  const latest = await getLatestValue(countryCode, indicator.code).catch(() => null)
+  // `undefined` = the World Bank didn't answer (e.g. timed out); `null` = no data.
+  const latest = await getLatestValue(countryCode, indicator.code).catch(recoverWith(undefined))
 
   return (
     <Link href={href} scroll={false} className="rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
@@ -38,7 +39,7 @@ export async function KpiCard({
           </CardTitle>
         </CardHeader>
         <CardContent className="text-xs text-muted-foreground">
-          {latest ? `in ${latest.year}` : "No data available"}
+          {latest ? `in ${latest.year}` : latest === null ? "No data available" : "Couldn't load, try again later"}
         </CardContent>
       </Card>
     </Link>

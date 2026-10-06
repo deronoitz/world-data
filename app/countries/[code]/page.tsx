@@ -6,6 +6,7 @@ import { ArrowLeftIcon, ChartLineIcon } from "lucide-react"
 
 import { CompareButton } from "@/components/countries/CompareButton"
 import { FavoriteButton } from "@/components/countries/FavoriteButton"
+import { ChartError } from "@/components/indicators/ChartError"
 import { IndicatorHistory } from "@/components/indicators/IndicatorHistory"
 import { IndicatorSelect } from "@/components/indicators/IndicatorSelect"
 import { KpiCard } from "@/components/indicators/KpiCard"
@@ -21,7 +22,7 @@ import { firstParam } from "@/lib/countries"
 import { flagEmoji } from "@/lib/format"
 import { DEFAULT_INDICATORS, getIndicator, isIndicatorCode, resolveIndicator } from "@/lib/indicators"
 import { getSavedIndicatorCodes } from "@/lib/library"
-import { getCountry, getIndicatorSeries } from "@/lib/worldbank/client"
+import { getCountry, getIndicatorSeries, recoverWith } from "@/lib/worldbank/client"
 import type { Country } from "@/lib/worldbank/types"
 import { parseYearRange } from "@/lib/years"
 
@@ -181,7 +182,8 @@ async function HistorySection({
   from?: number
   to?: number
 }) {
-  const series = await getIndicatorSeries([country.code], indicatorCode, from, to)
+  const series = await getIndicatorSeries([country.code], indicatorCode, from, to).catch(recoverWith(null))
+  if (!series) return <ChartError />
   return (
     <IndicatorHistory
       series={series}

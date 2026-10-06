@@ -4,6 +4,7 @@ import { ChartLineIcon } from "lucide-react"
 
 import { CountryMultiSelect } from "@/components/compare/CountryMultiSelect"
 import { SaveComparisonDialog } from "@/components/compare/SaveComparisonDialog"
+import { ChartError } from "@/components/indicators/ChartError"
 import { IndicatorHistory } from "@/components/indicators/IndicatorHistory"
 import { IndicatorSelect } from "@/components/indicators/IndicatorSelect"
 import { YearRange } from "@/components/indicators/YearRange"
@@ -14,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { firstParam } from "@/lib/countries"
 import { flagEmoji, formatValue } from "@/lib/format"
 import { resolveIndicator, type Indicator } from "@/lib/indicators"
-import { getCountries, getIndicatorSeries, getLatestValue } from "@/lib/worldbank/client"
+import { getCountries, getIndicatorSeries, getLatestValue, recoverWith } from "@/lib/worldbank/client"
 import type { Country } from "@/lib/worldbank/types"
 import { parseYearRange } from "@/lib/years"
 import { MAX_COMPARE } from "@/lib/compare"
@@ -123,7 +124,8 @@ async function CompareChart({
     indicator.code,
     from,
     to
-  )
+  ).catch(recoverWith(null))
+  if (!series) return <ChartError />
   return (
     <IndicatorHistory
       series={series}
@@ -135,7 +137,7 @@ async function CompareChart({
 
 async function LatestTable({ countries, indicator }: { countries: Country[]; indicator: Indicator }) {
   const latest = await Promise.all(
-    countries.map((c) => getLatestValue(c.code, indicator.code).catch(() => null))
+    countries.map((c) => getLatestValue(c.code, indicator.code).catch(recoverWith(null)))
   )
   return (
     <Table>

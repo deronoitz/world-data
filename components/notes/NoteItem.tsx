@@ -5,7 +5,7 @@ import { PencilIcon, Trash2Icon } from "lucide-react"
 
 import { Button } from "@/components/ui/Button"
 import { formatDate } from "@/lib/format"
-import type { NoteRow } from "@/lib/supabase/types"
+import type { NoteRow } from "@/lib/db/types"
 import { useUserData } from "@/stores/user-data-store"
 
 import { NoteEditor } from "./NoteEditor"

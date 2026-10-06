@@ -1,16 +1,10 @@
-import { check, json, readJson, withUser } from "@/lib/api/route"
+import { json, readJson, withUser } from "@/lib/api/route"
 import { ValidationError, asRecord, countryCodes, indicatorCode, optionalYear, text } from "@/lib/api/validate"
+import { createComparison, listComparisons } from "@/lib/data/comparisons"
 
-export const GET = withUser(async ({ supabase }) => {
-  const { data, error } = await supabase
-    .from("comparisons")
-    .select("*")
-    .order("created_at", { ascending: false })
-  check(error)
-  return json(data)
-})
+export const GET = withUser(async ({ userId }) => json(await listComparisons(userId)))
 
-export const POST = withUser(async ({ req, supabase }) => {
+export const POST = withUser(async ({ req, userId }) => {
   const body = asRecord(await readJson(req))
   const yearFrom = optionalYear(body.year_from, "year_from")
   const yearTo = optionalYear(body.year_to, "year_to")
@@ -18,17 +12,12 @@ export const POST = withUser(async ({ req, supabase }) => {
     throw new ValidationError("year_from must not be after year_to")
   }
 
-  const { data, error } = await supabase
-    .from("comparisons")
-    .insert({
-      name: text(body.name, "name", 120),
-      country_codes: countryCodes(body.country_codes),
-      indicator_code: indicatorCode(body.indicator_code),
-      year_from: yearFrom,
-      year_to: yearTo,
-    })
-    .select()
-    .single()
-  check(error)
-  return json(data, { status: 201 })
+  const row = await createComparison(userId, {
+    name: text(body.name, "name", 120),
+    country_codes: countryCodes(body.country_codes),
+    indicator_code: indicatorCode(body.indicator_code),
+    year_from: yearFrom,
+    year_to: yearTo,
+  })
+  return json(row, { status: 201 })
 })

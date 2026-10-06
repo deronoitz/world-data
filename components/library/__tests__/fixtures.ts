@@ -1,4 +1,4 @@
-import type { ComparisonRow, NoteRow } from "@/lib/supabase/types"
+import type { ComparisonRow, NoteRow } from "@/lib/db/types"
 
 import type { CountryLookup } from "../helpers/types"
 

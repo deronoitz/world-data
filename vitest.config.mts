@@ -17,7 +17,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      include: ["app/**", "components/**", "lib/**", "stores/**", "proxy.ts"],
+      include: ["app/**", "components/**", "lib/**", "stores/**", "auth.ts"],
       // components/ui is generated shadcn code, tested upstream.
       exclude: ["**/__tests__/**", "**/*.d.ts", "components/ui/**"],
       thresholds: { statements: 95, branches: 95, functions: 95, lines: 95 },

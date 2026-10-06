@@ -9,8 +9,8 @@ import { SessionSync } from "@/components/providers/SessionSync"
 import { ThemeProvider } from "@/components/providers/ThemeProvider"
 import { Toaster } from "@/components/ui/Sonner"
 import { TooltipProvider } from "@/components/ui/Tooltip"
-import { toSessionUser } from "@/lib/session-user"
-import { getUser } from "@/lib/supabase/server"
+import { isDevLoginEnabled, isGoogleConfigured } from "@/lib/auth/env"
+import { getUser } from "@/lib/auth/session"
 
 import "./globals.css"
 
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   // Not awaited: the user streams in under Suspense so the shell renders immediately.
-  const userPromise = getUser().then(toSessionUser)
+  const userPromise = getUser()
 
   return (
     <html
@@ -40,7 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               {children}
             </main>
             <CompareTray />
-            <SignInDialog />
+            <SignInDialog providers={{ google: isGoogleConfigured, devLogin: isDevLoginEnabled }} />
             <Suspense>
               <SessionSync userPromise={userPromise} />
             </Suspense>

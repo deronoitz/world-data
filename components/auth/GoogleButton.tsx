@@ -1,12 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { usePathname, useSearchParams } from "next/navigation"
-import { toast } from "sonner"
-
 import { Button } from "@/components/ui/Button"
 import { Spinner } from "@/components/ui/Spinner"
-import { isSupabaseConfigured } from "@/lib/supabase/env"
+import { signInWithGoogle } from "@/lib/auth/actions"
+
+import { useSignInAction } from "./hooks/useSignInAction"
 
 function GoogleIcon() {
   return (
@@ -23,38 +21,19 @@ export function GoogleButton({
   next,
   label = "Continue with Google",
   ...props
-}: { next?: string; label?: string } & Omit<React.ComponentProps<typeof Button>, "onClick">) {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [pending, setPending] = useState(false)
-
-  async function signIn() {
-    if (!isSupabaseConfigured) {
-      toast.error("Supabase is not configured", {
-        description: "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.",
-      })
-      return
-    }
-    setPending(true)
-    const query = searchParams.toString()
-    const target = next ?? `${pathname}${query ? `?${query}` : ""}`
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
-    // Loaded on demand so the Supabase client stays out of the initial bundle.
-    const { createClient } = await import("@/lib/supabase/client")
-    const { error } = await createClient().auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(target)}` },
-    })
-    if (error) {
-      setPending(false)
-      toast.error("Could not start Google sign in", { description: error.message })
-    }
-  }
+}: { next?: string; label?: string } & Omit<React.ComponentProps<typeof Button>, "onClick" | "type">) {
+  const [signIn, pending] = useSignInAction(signInWithGoogle, {
+    next,
+    unavailable: "Sign in is not configured",
+    failed: "Could not start Google sign in",
+  })
 
   return (
-    <Button variant="outline" onClick={signIn} disabled={pending} {...props}>
-      {pending ? <Spinner data-icon="inline-start" /> : <GoogleIcon />}
-      <span data-label>{label}</span>
-    </Button>
+    <form action={signIn} className="contents">
+      <Button type="submit" variant="outline" disabled={pending} {...props}>
+        {pending ? <Spinner data-icon="inline-start" /> : <GoogleIcon />}
+        <span data-label>{label}</span>
+      </Button>
+    </form>
   )
 }

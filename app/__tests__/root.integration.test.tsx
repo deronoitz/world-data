@@ -2,13 +2,11 @@ import { isValidElement, type ReactElement, type ReactNode } from "react"
 import { redirect } from "next/navigation"
 
 import { SessionSync } from "@/components/providers/SessionSync"
-import { setupSupabase } from "@/test-kit/supabase"
+import { setupAuth } from "@/test-kit/auth"
 
 import RootLayout, { metadata } from "../layout"
 import Home from "../page"
 
-vi.mock("@/lib/supabase/server", () => import("@/test-kit/supabase"))
-vi.mock("@/lib/supabase/env", () => import("@/test-kit/supabase"))
 vi.mock("next/font/google", () => ({
   Geist: () => ({ variable: "font-sans-var" }),
   Geist_Mono: () => ({ variable: "font-mono-var" }),
@@ -31,7 +29,7 @@ function find(node: ReactNode, match: (el: ReactElement<Props>) => boolean): Rea
 
 describe("root layout", () => {
   it("renders the document shell with fonts and the page inside <main>", () => {
-    setupSupabase()
+    setupAuth()
     const html = RootLayout({ children: <p>Page</p> } as LayoutProps<"/">) as ReactElement<Props>
 
     expect(html.type).toBe("html")
@@ -42,7 +40,7 @@ describe("root layout", () => {
   })
 
   it("streams the signed-in user to SessionSync", async () => {
-    setupSupabase()
+    setupAuth()
     const html = RootLayout({ children: null } as LayoutProps<"/">)
     const sync = find(html, (el) => el.type === SessionSync)!
     await expect(sync.props.userPromise).resolves.toMatchObject({
@@ -52,7 +50,7 @@ describe("root layout", () => {
   })
 
   it("streams null when signed out", async () => {
-    setupSupabase({ user: null })
+    setupAuth({ user: null })
     const sync = find(RootLayout({ children: null } as LayoutProps<"/">), (el) => el.type === SessionSync)!
     await expect(sync.props.userPromise).resolves.toBeNull()
   })

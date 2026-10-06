@@ -1,0 +1,9 @@
+.git
+.next
+node_modules
+coverage
+*.tsbuildinfo
+.env*
+Dockerfile.dev
+compose.yaml
+.dockerignore

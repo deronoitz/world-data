@@ -1,156 +1,153 @@
 // @vitest-environment node
 
+import { savedIndicators } from "@/lib/db/schema"
+import { OTHER_USER, TEST_USER, setAuthConfigured, setupAuth } from "@/test-kit/auth"
+import { db } from "@/test-kit/db"
 import { callRoute } from "@/test-kit/route"
-import { setSupabaseConfigured, setupSupabase, TEST_USER, type Query } from "@/test-kit/supabase"
 
 import { GET, POST, PUT } from "../route"
 import { DELETE } from "../[code]/route"
 
-vi.mock("@/lib/supabase/server", () => import("@/test-kit/supabase"))
-vi.mock("@/lib/supabase/env", () => import("@/test-kit/supabase"))
+const POP = "SP.POP.TOTL"
+const NET = "IT.NET.USER.ZS"
+const URB = "SP.URB.TOTL.IN.ZS"
 
-const ROW = { indicator_code: "SP.URB.TOTL.IN.ZS", position: 3 }
-const isLastPositionQuery = (query: Query) => query.ops.some(([op]) => op === "limit")
+const pinned = async (userId = TEST_USER.id) =>
+  (await db.select().from(savedIndicators))
+    .filter((r) => r.user_id === userId)
+    .sort((a, b) => a.position - b.position)
+    .map((r) => [r.indicator_code, r.position])
 
 describe("GET /api/indicators", () => {
-  it("lists pinned indicators by position, then creation time", async () => {
-    const supabase = setupSupabase({ tables: { saved_indicators: { data: [ROW], error: null } } })
+  it("lists the user's pinned indicators by position, then creation time", async () => {
+    await db.insert(savedIndicators).values([
+      { user_id: TEST_USER.id, indicator_code: NET, position: 1 },
+      { user_id: TEST_USER.id, indicator_code: URB, position: 0, created_at: new Date("2026-02-01") },
+      { user_id: TEST_USER.id, indicator_code: POP, position: 0, created_at: new Date("2026-01-01") },
+      { user_id: OTHER_USER.id, indicator_code: POP, position: 0 },
+    ])
     const res = await callRoute(GET)
-    expect(res).toMatchObject({ status: 200, body: [ROW] })
-    expect(supabase.queries[0].ops).toEqual([
-      ["select", "*"],
-      ["order", "position", { ascending: true }],
-      ["order", "created_at", { ascending: true }],
+    expect(res.status).toBe(200)
+    expect((res.body as unknown as { indicator_code: string }[]).map((r) => r.indicator_code)).toEqual([
+      POP,
+      URB,
+      NET,
     ])
   })
 
   it("returns 401 when signed out", async () => {
-    setupSupabase({ user: null })
+    setupAuth({ user: null })
     expect(await callRoute(GET)).toMatchObject({ status: 401, body: { error: "Unauthorized" } })
   })
 
-  it("returns 503 when Supabase is not configured", async () => {
-    setSupabaseConfigured(false)
+  it("returns 503 when auth is not configured", async () => {
+    setAuthConfigured(false)
     expect((await callRoute(GET)).status).toBe(503)
-  })
-
-  it("returns 500 on a database error", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
-    setupSupabase({ tables: { saved_indicators: { data: null, error: { message: "boom" } } } })
-    expect(await callRoute(GET)).toMatchObject({ status: 500, body: { error: "Internal server error" } })
   })
 })
 
 describe("POST /api/indicators", () => {
-  it("appends after the last pinned position", async () => {
-    const supabase = setupSupabase({
-      tables: {
-        saved_indicators: (query) =>
-          isLastPositionQuery(query) ? { data: { position: 2 }, error: null } : { data: ROW, error: null },
-      },
-    })
-    const res = await callRoute(POST, { method: "POST", body: { indicator_code: ROW.indicator_code } })
-    expect(res).toMatchObject({ status: 201, body: ROW })
-    expect(supabase.queries[0].ops).toEqual([
-      ["select", "position"],
-      ["order", "position", { ascending: false }],
-      ["limit", 1],
-      ["maybeSingle"],
+  it("appends after the user's last pinned position", async () => {
+    await db.insert(savedIndicators).values([
+      { user_id: TEST_USER.id, indicator_code: POP, position: 2 },
+      { user_id: OTHER_USER.id, indicator_code: NET, position: 9 },
     ])
-    expect(supabase.queries[1].ops[0]).toEqual(["insert", { indicator_code: ROW.indicator_code, position: 3 }])
+    const res = await callRoute(POST, { method: "POST", body: { indicator_code: URB } })
+    expect(res).toMatchObject({ status: 201, body: { indicator_code: URB, position: 3 } })
   })
 
   it("starts at position 0 when nothing is pinned yet", async () => {
-    const supabase = setupSupabase({
-      tables: {
-        saved_indicators: (query) =>
-          isLastPositionQuery(query) ? { data: null, error: null } : { data: ROW, error: null },
-      },
-    })
-    await callRoute(POST, { method: "POST", body: { indicator_code: ROW.indicator_code } })
-    expect(supabase.queries[1].ops[0]).toEqual(["insert", { indicator_code: ROW.indicator_code, position: 0 }])
+    const res = await callRoute(POST, { method: "POST", body: { indicator_code: URB } })
+    expect(res).toMatchObject({ status: 201, body: { indicator_code: URB, position: 0 } })
   })
 
   it("rejects an unsupported indicator", async () => {
-    setupSupabase()
     const res = await callRoute(POST, { method: "POST", body: { indicator_code: "NOPE" } })
     expect(res).toMatchObject({ status: 400, body: { error: "indicator_code is not a supported indicator" } })
   })
 
   it("rejects invalid JSON", async () => {
-    setupSupabase()
     const res = await callRoute(POST, { method: "POST", body: "{" })
     expect(res).toMatchObject({ status: 400, body: { error: "Invalid JSON body" } })
   })
 
   it("maps an already-pinned indicator to 409", async () => {
-    setupSupabase({
-      tables: {
-        saved_indicators: (query) =>
-          isLastPositionQuery(query)
-            ? { data: null, error: null }
-            : { data: null, error: { code: "23505", message: "duplicate" } },
-      },
-    })
-    const res = await callRoute(POST, { method: "POST", body: { indicator_code: ROW.indicator_code } })
+    await db.insert(savedIndicators).values({ user_id: TEST_USER.id, indicator_code: URB })
+    const res = await callRoute(POST, { method: "POST", body: { indicator_code: URB } })
     expect(res).toMatchObject({ status: 409, body: { error: "Already exists" } })
-  })
-
-  it("fails when the position lookup errors", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
-    const supabase = setupSupabase({
-      tables: { saved_indicators: { data: null, error: { message: "boom" } } },
-    })
-    const res = await callRoute(POST, { method: "POST", body: { indicator_code: ROW.indicator_code } })
-    expect(res.status).toBe(500)
-    expect(supabase.queries).toHaveLength(1)
   })
 })
 
 describe("PUT /api/indicators", () => {
-  it("upserts every code with its new position", async () => {
-    const supabase = setupSupabase({ tables: { saved_indicators: { data: [], error: null } } })
-    const res = await callRoute(PUT, { method: "PUT", body: { order: ["SP.POP.TOTL", "IT.NET.USER.ZS"] } })
+  it("rewrites positions in the given order and returns the list", async () => {
+    await db.insert(savedIndicators).values([
+      { user_id: TEST_USER.id, indicator_code: NET, position: 0 },
+      { user_id: TEST_USER.id, indicator_code: POP, position: 1 },
+      { user_id: OTHER_USER.id, indicator_code: POP, position: 5 },
+    ])
+    const res = await callRoute(PUT, { method: "PUT", body: { order: [POP, NET] } })
     expect(res.status).toBe(200)
-    expect(supabase.queries[0].ops[0]).toEqual([
-      "upsert",
-      [
-        { user_id: TEST_USER.id, indicator_code: "SP.POP.TOTL", position: 0 },
-        { user_id: TEST_USER.id, indicator_code: "IT.NET.USER.ZS", position: 1 },
-      ],
-      { onConflict: "user_id,indicator_code" },
+    expect(await pinned()).toEqual([
+      [POP, 0],
+      [NET, 1],
+    ])
+    expect(await pinned(OTHER_USER.id)).toEqual([[POP, 5]])
+  })
+
+  it("accepts an empty order", async () => {
+    const res = await callRoute(PUT, { method: "PUT", body: { order: [] } })
+    expect(res).toMatchObject({ status: 200, body: [] })
+  })
+
+  it.each([
+    ["a code that isn't saved", [POP, NET, URB]],
+    ["a missing saved code", [POP]],
+  ])("returns 409 and changes nothing for %s", async (_, order) => {
+    await db.insert(savedIndicators).values([
+      { user_id: TEST_USER.id, indicator_code: NET, position: 0 },
+      { user_id: TEST_USER.id, indicator_code: POP, position: 1 },
+    ])
+    const res = await callRoute(PUT, { method: "PUT", body: { order } })
+    expect(res).toMatchObject({ status: 409, body: { error: "order must list exactly the saved indicators" } })
+    expect(await pinned()).toEqual([
+      [NET, 0],
+      [POP, 1],
     ])
   })
 
   it.each([
-    ["a non-array order", { order: "SP.POP.TOTL" }, "order must be an array"],
+    ["a non-array order", { order: POP }, "order must be an array"],
     ["an unknown code", { order: ["NOPE"] }, "order is not a supported indicator"],
-    ["duplicate codes", { order: ["SP.POP.TOTL", "SP.POP.TOTL"] }, "order has duplicates"],
+    ["duplicate codes", { order: [POP, POP] }, "order has duplicates"],
     ["a non-object body", [], "Body must be a JSON object"],
   ])("returns 400 for %s", async (_, body, error) => {
-    setupSupabase()
     const res = await callRoute(PUT, { method: "PUT", body })
     expect(res).toMatchObject({ status: 400, body: { error } })
   })
 })
 
 describe("DELETE /api/indicators/[code]", () => {
-  it("unpins the URL-decoded code", async () => {
-    const supabase = setupSupabase()
-    const res = await callRoute(DELETE, { method: "DELETE", params: { code: "SP.POP.TOTL" } })
+  it("unpins only the user's own indicator", async () => {
+    await db.insert(savedIndicators).values([
+      { user_id: TEST_USER.id, indicator_code: POP },
+      { user_id: OTHER_USER.id, indicator_code: POP },
+    ])
+    const res = await callRoute(DELETE, { method: "DELETE", params: { code: POP } })
     expect(res).toMatchObject({ status: 204, body: null })
-    expect(supabase.queries[0].ops).toEqual([["delete"], ["eq", "indicator_code", "SP.POP.TOTL"]])
+    expect(await pinned()).toEqual([])
+    expect(await pinned(OTHER_USER.id)).toEqual([[POP, 0]])
   })
 
   it("rejects an unsupported code", async () => {
-    setupSupabase()
     const res = await callRoute(DELETE, { method: "DELETE", params: { code: "NOPE%20X" } })
     expect(res).toMatchObject({ status: 400, body: { error: "code is not a supported indicator" } })
   })
 
-  it("surfaces database errors", async () => {
+  it("surfaces database errors as 500", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
-    setupSupabase({ tables: { saved_indicators: { data: null, error: { message: "boom" } } } })
-    expect((await callRoute(DELETE, { method: "DELETE", params: { code: "SP.POP.TOTL" } })).status).toBe(500)
+    vi.spyOn(db, "delete").mockImplementationOnce(() => {
+      throw new Error("boom")
+    })
+    expect((await callRoute(DELETE, { method: "DELETE", params: { code: POP } })).status).toBe(500)
   })
 })

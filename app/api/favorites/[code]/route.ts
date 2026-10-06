@@ -1,11 +1,8 @@
-import { check, withUser } from "@/lib/api/route"
+import { withUser } from "@/lib/api/route"
 import { countryCode } from "@/lib/api/validate"
+import { removeFavorite } from "@/lib/data/favorites"
 
-export const DELETE = withUser<RouteContext<"/api/favorites/[code]">>(
-  async ({ ctx, supabase }) => {
-    const code = countryCode((await ctx.params).code, "code")
-    const { error } = await supabase.from("favorite_countries").delete().eq("country_code", code)
-    check(error)
-    return new Response(null, { status: 204 })
-  }
-)
+export const DELETE = withUser<RouteContext<"/api/favorites/[code]">>(async ({ ctx, userId }) => {
+  await removeFavorite(userId, countryCode((await ctx.params).code, "code"))
+  return new Response(null, { status: 204 })
+})

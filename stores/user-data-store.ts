@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import { create } from "zustand"
 
 import { api } from "@/lib/api/client"
-import type { ComparisonRow, NoteRow, SavedIndicatorRow, FavoriteRow } from "@/lib/supabase/types"
+import type { ComparisonRow, NoteRow, SavedIndicatorRow, FavoriteRow } from "@/lib/db/types"
 
 export type SessionUser = {
   id: string
