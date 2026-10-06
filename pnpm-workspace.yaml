@@ -1,0 +1,7 @@
+# Standalone project: keeps pnpm from treating ../ as this project's workspace root.
+packages:
+  - "."
+
+onlyBuiltDependencies:
+  - sharp
+  - unrs-resolver
